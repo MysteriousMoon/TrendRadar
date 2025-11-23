@@ -3703,7 +3703,13 @@ def generate_rss_feed(
                         if ranks := item.get("ranks", []):
                             min_rank = min(ranks)
                             rank_display = f" <strong>[排名: {min_rank}]</strong>" if min_rank <= CONFIG["RANK_THRESHOLD"] else f" [排名: {min_rank}]"
-                        time_display = f" - {html_escape(item.get('time_display', ''))}" if item.get('time_display') else ""
+                        # 格式化时间显示，将"19时21分 ~ 23时59分"转换为"19:21 - 23:59"
+                        raw_time = item.get('time_display', '')
+                        if raw_time:
+                            clean_time = raw_time.replace("[", "").replace("]", "").replace("时", ":").replace("分", "").replace(" ~ ", " - ")
+                            time_display = f" - {html_escape(clean_time)}"
+                        else:
+                            time_display = ""
                         count_display = f" ({item.get('count', 1)}次)" if item.get('count', 1) > 1 else ""
                         html_content += f"<li><a href='{link}'>{title}</a>[{source}]{rank_display}{time_display}{count_display}</li>"
                     html_content += "</ul>"
