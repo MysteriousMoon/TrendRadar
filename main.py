@@ -3589,7 +3589,7 @@ def generate_rss_feed(
                             rank_display = f" <strong>[排名: {min_rank}]</strong>" if min_rank <= CONFIG["RANK_THRESHOLD"] else f" [排名: {min_rank}]"
                         time_display = f" - {html_escape(item.get('time_display', ''))}" if item.get('time_display') else ""
                         count_display = f" ({item.get('count', 1)}次)" if item.get('count', 1) > 1 else ""
-                        html_content += f"<li>[{source}]{rank_display} <a href='{link}'>{title}</a>{time_display}{count_display}</li>"
+                        html_content += f"<li><a href='{link}'>{title}</a>[{source}]{rank_display}{time_display}{count_display}</li>"
                     html_content += "</ul>"
         
         today_entry = {
