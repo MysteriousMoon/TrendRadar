@@ -1699,9 +1699,20 @@ def generate_html_report(
         f.write(html_content)
 
     if is_daily_summary:
+        # 保存到根目录的 index.html（最新版本）
         root_file_path = Path("index.html")
         with open(root_file_path, "w", encoding="utf-8") as f:
             f.write(html_content)
+        
+        # 保存带日期的归档版本到 archive 文件夹（用于 RSS 链接）
+        now = get_configured_time()
+        archive_dir = Path("archive")
+        archive_dir.mkdir(exist_ok=True)
+        dated_filename = f"{now.strftime('%Y-%m-%d')}.html"
+        dated_file_path = archive_dir / dated_filename
+        with open(dated_file_path, "w", encoding="utf-8") as f:
+            f.write(html_content)
+        print(f"已保存每日归档版本: archive/{dated_filename}")
 
     return file_path
 
@@ -3563,6 +3574,61 @@ def send_to_ntfy(
         return False
 
 
+def should_update_rss_today() -> bool:
+    """检查是否应该生成昨天的RSS（在新的一天生成前一天的完整汇总）"""
+    rss_record_dir = Path("output") / ".rss_records"
+    rss_record_dir.mkdir(parents=True, exist_ok=True)
+    
+    now = get_configured_time()
+    yesterday = now - timedelta(days=1)
+    yesterday_str = yesterday.strftime('%Y-%m-%d')
+    
+    # 检查昨天的RSS是否已经生成
+    record_file = rss_record_dir / f"rss_update_{yesterday_str}.flag"
+    
+    if record_file.exists():
+        print(f"昨天的RSS已生成（{yesterday_str}），跳过本次更新")
+        return False
+    
+    # 检查昨天是否有数据文件
+    yesterday_folder = Path("output") / yesterday.strftime("%Y年%m月%d日") / "txt"
+    if not yesterday_folder.exists() or not list(yesterday_folder.glob("*.txt")):
+        print(f"昨天（{yesterday_str}）没有数据文件，跳过RSS生成")
+        return False
+    
+    print(f"准备生成昨天的RSS汇总（{yesterday_str}）")
+    return True
+
+
+def mark_rss_updated(date_str: str):
+    """标记指定日期的RSS已更新"""
+    rss_record_dir = Path("output") / ".rss_records"
+    rss_record_dir.mkdir(parents=True, exist_ok=True)
+    
+    record_file = rss_record_dir / f"rss_update_{date_str}.flag"
+    
+    # 清理7天前的旧记录
+    try:
+        for old_file in rss_record_dir.glob("rss_update_*.flag"):
+            try:
+                old_date_str = old_file.stem.replace("rss_update_", "")
+                file_date = datetime.strptime(old_date_str, '%Y-%m-%d')
+                file_date = pytz.timezone(CONFIG["TIMEZONE"]).localize(file_date)
+                current_time = get_configured_time()
+                if (current_time - file_date).days > 7:
+                    old_file.unlink()
+                    print(f"清理过期RSS记录: {old_file.name}")
+            except Exception:
+                pass
+    except Exception as e:
+        print(f"清理RSS记录时出错: {e}")
+    
+    # 创建标记文件
+    with open(record_file, 'w', encoding='utf-8') as f:
+        f.write(get_configured_time().strftime('%Y-%m-%d %H:%M:%S'))
+    print(f"已标记RSS更新记录: {date_str}")
+
+
 def generate_rss_feed(
     all_results: Dict,
     id_to_name: Dict,
@@ -3571,11 +3637,18 @@ def generate_rss_feed(
     base_url: str = "https://example.com/rss.xml",
     site_url: str = "https://example.com",
     max_entries: int = 14, # Keep last 14 days
+    target_date: Optional[datetime] = None,  # 新增：指定要生成RSS的日期
 ):
-    """生成RSS订阅（每日摘要模式，保留历史记录）"""
+    """生成RSS订阅（每日摘要模式，保留历史记录）- 生成指定日期的完整汇总"""
     try:
         now = get_configured_time()
-        today_str = now.strftime('%Y-%m-%d')
+        
+        # 使用传入的目标日期，如果没有则使用当前时间
+        if target_date is None:
+            target_date = now
+        
+        target_date_str = target_date.strftime('%Y-%m-%d')
+        print(f"正在生成 {target_date_str} 的RSS条目")
 
         # --- 1. 加载历史条目 ---
         existing_entries = []
@@ -3596,13 +3669,13 @@ def generate_rss_feed(
                     except (ValueError, IndexError):
                         entry_date_str = "" # 格式不匹配则忽略
 
-                # 过滤掉今天的条目，因为我们会重新生成它
-                if entry_date_str != today_str:
+                # 过滤掉目标日期的条目，因为我们会重新生成它
+                if entry_date_str != target_date_str:
                     existing_entries.append(entry)
         
         print(f"从 {output_path} 加载了 {len(existing_entries)} 个历史 RSS 条目。")
 
-        # --- 2. 生成今天的摘要 ---
+        # --- 2. 生成目标日期的摘要 ---
         word_groups, filter_words = load_frequency_words()
         stats, _ = count_word_frequency(
             all_results,
@@ -3615,7 +3688,7 @@ def generate_rss_feed(
             mode='daily'
         )
 
-        html_content = f"<h1>{today_str} 热点新闻</h1>"
+        html_content = f"<h1>{target_date_str} 热点新闻</h1>"
         if not stats or all(stat['count'] == 0 for stat in stats):
             html_content += "<p>暂无匹配的热点新闻。</p>"
         else:
@@ -3635,12 +3708,23 @@ def generate_rss_feed(
                         html_content += f"<li><a href='{link}'>{title}</a>[{source}]{rank_display}{time_display}{count_display}</li>"
                     html_content += "</ul>"
         
-        today_entry = {
-            'title': f"每日热点新闻摘要 - {today_str}",
-            'link': site_url,
+        # 构建每日归档页面的链接
+        # 将 site_url 的 index.html 替换为 archive/日期.html
+        if site_url.endswith('index.html'):
+            base_site_url = site_url.replace('index.html', '')
+        elif site_url.endswith('/'):
+            base_site_url = site_url
+        else:
+            base_site_url = site_url + '/'
+        
+        daily_link = f"{base_site_url}archive/{target_date_str}.html"
+        
+        target_entry = {
+            'title': f"每日热点新闻摘要 - {target_date_str}",
+            'link': daily_link,  # 指向 archive 文件夹下的归档页面
             'description': html_content,
-            'pubDate': now,
-            'guid': f"{site_url}/{today_str}"
+            'pubDate': target_date,
+            'guid': f"{site_url}/{target_date_str}"
         }
 
         # --- 3. 合并并生成新 Feed ---
@@ -3654,13 +3738,13 @@ def generate_rss_feed(
         fg.language("zh-CN")
         fg.lastBuildDate(now)
 
-        # 添加今天的条目
+        # 添加目标日期的条目
         fe = fg.add_entry()
-        fe.id(today_entry['guid'])
-        fe.title(today_entry['title'])
-        fe.link(href=today_entry['link'])
-        fe.description(today_entry['description'], isSummary=False)
-        fe.pubDate(today_entry['pubDate'])
+        fe.id(target_entry['guid'])
+        fe.title(target_entry['title'])
+        fe.link(href=target_entry['link'])
+        fe.description(target_entry['description'], isSummary=False)
+        fe.pubDate(target_entry['pubDate'])
 
         # 添加历史条目，并限制数量
         for i, entry in enumerate(existing_entries):
@@ -3690,6 +3774,9 @@ def generate_rss_feed(
         with open(output_path, "wb") as f:
             f.write(fg.rss_str(pretty=True))
         print(f"RSS feed (daily digest with history) generated successfully to {output_path}")
+        
+        # 标记目标日期已更新RSS
+        mark_rss_updated(target_date_str)
 
     except Exception as e:
         print(f"Error generating RSS feed (daily digest with history): {e}")
@@ -4019,6 +4106,95 @@ class NewsAnalyzer:
 
         return html_file
 
+    def _generate_yesterday_rss_and_archive(self) -> None:
+        """生成昨天的RSS条目和归档HTML"""
+        now = get_configured_time()
+        yesterday = now - timedelta(days=1)
+        yesterday_str = yesterday.strftime('%Y-%m-%d')
+        yesterday_folder_name = yesterday.strftime('%Y年%m月%d日')
+        
+        print(f"开始生成昨天（{yesterday_str}）的RSS和归档...")
+        
+        # 读取昨天的数据
+        yesterday_txt_dir = Path("output") / yesterday_folder_name / "txt"
+        if not yesterday_txt_dir.exists():
+            print(f"昨天的数据文件夹不存在: {yesterday_txt_dir}")
+            return
+        
+        # 获取当前监控平台ID列表
+        current_platform_ids = [platform["id"] for platform in CONFIG["PLATFORMS"]]
+        
+        # 读取昨天的所有数据（使用相同的函数逻辑，但指定昨天的文件夹）
+        all_results = {}
+        id_to_name = {}
+        title_info = {}
+        
+        files = sorted([f for f in yesterday_txt_dir.iterdir() if f.suffix == ".txt"])
+        for file_path in files:
+            time_info = file_path.stem
+            titles_by_id, file_id_to_name = parse_file_titles(file_path)
+            
+            # 过滤当前监控平台
+            if current_platform_ids:
+                filtered_titles_by_id = {}
+                filtered_id_to_name = {}
+                for source_id, title_data in titles_by_id.items():
+                    if source_id in current_platform_ids:
+                        filtered_titles_by_id[source_id] = title_data
+                        if source_id in file_id_to_name:
+                            filtered_id_to_name[source_id] = file_id_to_name[source_id]
+                titles_by_id = filtered_titles_by_id
+                file_id_to_name = filtered_id_to_name
+            
+            id_to_name.update(file_id_to_name)
+            
+            for source_id, title_data in titles_by_id.items():
+                process_source_data(
+                    source_id, title_data, time_info, all_results, title_info
+                )
+        
+        if not all_results:
+            print(f"昨天（{yesterday_str}）没有有效数据")
+            return
+        
+        # 生成昨天的归档HTML
+        word_groups, filter_words = load_frequency_words()
+        stats, _ = count_word_frequency(
+            all_results,
+            word_groups,
+            filter_words,
+            id_to_name,
+            title_info,
+            self.rank_threshold,
+            new_titles=None,
+            mode='daily'
+        )
+        
+        total_titles = sum(len(titles) for titles in all_results.values())
+        report_data = prepare_report_data(stats, [], None, id_to_name, 'daily')
+        html_content = render_html_content(
+            report_data, total_titles, is_daily_summary=True, mode='daily',
+            update_info=self.update_info if CONFIG["SHOW_VERSION_UPDATE"] else None
+        )
+        
+        # 保存昨天的归档HTML
+        archive_dir = Path("archive")
+        archive_dir.mkdir(exist_ok=True)
+        yesterday_html_file = archive_dir / f"{yesterday_str}.html"
+        with open(yesterday_html_file, "w", encoding="utf-8") as f:
+            f.write(html_content)
+        print(f"已保存昨天的归档HTML: {yesterday_html_file}")
+        
+        # 生成RSS（包含昨天的数据）
+        generate_rss_feed(
+            all_results,
+            id_to_name,
+            title_info,
+            base_url=CONFIG["RSS_BASE_URL"],
+            site_url=CONFIG["RSS_SITE_URL"],
+            target_date=yesterday,
+        )
+
     def _generate_summary_html(self, mode: str = "daily") -> Optional[str]:
         """生成汇总HTML"""
         summary_type = "当前榜单汇总" if mode == "current" else "当日汇总"
@@ -4150,15 +4326,9 @@ class NewsAnalyzer:
                         html_file_path=html_file,
                     )
 
-                # Generate RSS feed after processing all current data
-                if CONFIG["RSS_ENABLED"]:
-                    generate_rss_feed(
-                        all_results,
-                        historical_id_to_name,
-                        historical_title_info,
-                        base_url=CONFIG["RSS_BASE_URL"],
-                        site_url=CONFIG["RSS_SITE_URL"],
-                    )
+                # Generate RSS feed for yesterday (在新的一天生成前一天的完整汇总)
+                if CONFIG["RSS_ENABLED"] and should_update_rss_today():
+                    self._generate_yesterday_rss_and_archive()
 
             else:
                 print("❌ 严重错误：无法读取刚保存的数据文件")
@@ -4190,18 +4360,9 @@ class NewsAnalyzer:
                     html_file_path=html_file,
                 )
             
-            # Generate RSS feed using the current day's data
-            if CONFIG["RSS_ENABLED"]:
-                analysis_data_for_rss = self._load_analysis_data()
-                if analysis_data_for_rss:
-                    all_results_for_rss, id_to_name_for_rss, title_info_for_rss, _, _, _ = analysis_data_for_rss
-                    generate_rss_feed(
-                        all_results_for_rss,
-                        id_to_name_for_rss,
-                        title_info_for_rss,
-                        base_url=CONFIG["RSS_BASE_URL"],
-                        site_url=CONFIG["RSS_SITE_URL"],
-                    )
+            # Generate RSS feed for yesterday (在新的一天生成前一天的完整汇总)
+            if CONFIG["RSS_ENABLED"] and should_update_rss_today():
+                self._generate_yesterday_rss_and_archive()
 
         # 生成汇总报告（如果需要）
         summary_html = None
