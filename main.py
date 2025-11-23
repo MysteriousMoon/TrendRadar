@@ -1666,6 +1666,222 @@ def format_title_for_platform(
         return cleaned_title
 
 
+def _generate_archive_index(archive_dir: Path):
+    """生成archive目录的索引页面"""
+    # 获取所有归档文件
+    archive_files = sorted(archive_dir.glob("*.html"), reverse=True)
+    archive_files = [f for f in archive_files if f.name != "index.html"]
+    
+    html = """<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TrendRadar - Archive</title>
+    <style>
+        :root {
+            --bg-page: #f1f5f9;
+            --bg-card: #ffffff;
+            --text-main: #1e293b;
+            --text-sub: #64748b;
+            --border: #e2e8f0;
+            --accent: #2563eb;
+            --shadow: rgba(0, 0, 0, 0.05);
+        }
+        
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg-page: #0f172a;
+                --bg-card: #1e293b;
+                --text-main: #f1f5f9;
+                --text-sub: #94a3b8;
+                --border: #334155;
+                --accent: #38bdf8;
+                --shadow: rgba(0, 0, 0, 0.3);
+            }
+        }
+        
+        body.dark-mode {
+            --bg-page: #0f172a; --bg-card: #1e293b;
+            --text-main: #f1f5f9; --text-sub: #94a3b8;
+            --border: #334155; --accent: #38bdf8;
+            --shadow: rgba(0, 0, 0, 0.3);
+        }
+        
+        body.light-mode {
+            --bg-page: #f1f5f9; --bg-card: #ffffff;
+            --text-main: #1e293b; --text-sub: #64748b;
+            --border: #e2e8f0; --accent: #2563eb;
+            --shadow: rgba(0, 0, 0, 0.05);
+        }
+        
+        * { box-sizing: border-box; transition: background-color 0.3s, color 0.1s; }
+        
+        body {
+            font-family: "Inter", -apple-system, sans-serif;
+            background-color: var(--bg-page);
+            color: var(--text-main);
+            margin: 0;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            background: var(--bg-card);
+            padding: 20px 24px;
+            border-radius: 12px;
+            margin-bottom: 24px;
+            border: 1px solid var(--border);
+            box-shadow: 0 4px 6px -1px var(--shadow);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .header-left h1 {
+            margin: 0;
+            font-size: 24px;
+            font-weight: 800;
+        }
+        
+        .header-left p {
+            margin: 4px 0 0 0;
+            color: var(--text-sub);
+            font-size: 14px;
+        }
+        
+        .header-actions {
+            display: flex;
+            gap: 8px;
+        }
+        
+        .btn {
+            background: var(--text-main);
+            color: var(--bg-page);
+            border: none;
+            padding: 6px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 700;
+        }
+        
+        .btn-icon {
+            background: var(--border);
+            color: var(--text-main);
+            padding: 6px;
+            width: 28px;
+        }
+        
+        .btn:hover { opacity: 0.9; }
+        
+        .archive-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        
+        .archive-item {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 16px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            text-decoration: none;
+            color: var(--text-main);
+            box-shadow: 0 1px 2px var(--shadow);
+            transition: all 0.2s;
+        }
+        
+        .archive-item:hover {
+            border-color: var(--accent);
+            transform: translateX(4px);
+        }
+        
+        .archive-date {
+            font-weight: 700;
+            font-size: 16px;
+        }
+        
+        .archive-arrow {
+            color: var(--text-sub);
+            font-size: 18px;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--text-sub);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="header-left">
+                <h1>📦 Archive</h1>
+                <p>历史热点新闻归档</p>
+            </div>
+            <div class="header-actions">
+                <button class="btn btn-icon" onclick="toggleTheme()" title="切换主题">🌗</button>
+                <button class="btn" onclick="window.location.href='../index.html'">返回首页</button>
+            </div>
+        </div>
+        
+        <div class="archive-list">"""
+    
+    if archive_files:
+        for file in archive_files:
+            date_str = file.stem  # 文件名即日期 YYYY-MM-DD
+            html += f"""
+            <a href="{file.name}" class="archive-item">
+                <span class="archive-date">📅 {date_str}</span>
+                <span class="archive-arrow">→</span>
+            </a>"""
+    else:
+        html += """
+            <div class="empty-state">
+                <p>暂无归档内容</p>
+            </div>"""
+    
+    html += """
+        </div>
+    </div>
+    
+    <script>
+        function toggleTheme() {
+            const body = document.body;
+            if (body.classList.contains('dark-mode')) {
+                body.classList.remove('dark-mode');
+                body.classList.add('light-mode');
+            } else if (body.classList.contains('light-mode')) {
+                body.classList.remove('light-mode');
+                body.classList.add('dark-mode');
+            } else {
+                if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+                    body.classList.add('light-mode');
+                } else {
+                    body.classList.add('dark-mode');
+                }
+            }
+        }
+    </script>
+</body>
+</html>"""
+    
+    index_file = archive_dir / "index.html"
+    with open(index_file, "w", encoding="utf-8") as f:
+        f.write(html)
+    print(f"已生成归档索引页面: {index_file}")
+
+
 def generate_html_report(
     stats: List[Dict],
     total_titles: int,
@@ -1713,6 +1929,9 @@ def generate_html_report(
         with open(dated_file_path, "w", encoding="utf-8") as f:
             f.write(html_content)
         print(f"已保存每日归档版本: archive/{dated_filename}")
+        
+        # 生成archive/index.html列表页面
+        _generate_archive_index(archive_dir)
 
     return file_path
 
@@ -1956,6 +2175,7 @@ def render_html_content(
                 </div>
                 <div class="header-actions">
                     <button class="btn btn-icon" onclick="toggleTheme()" title="切换主题">🌗</button>
+                    <button class="btn" onclick="window.location.href='archive/index.html'">Archive</button>
                     <button class="btn" onclick="saveAsImage()">保存长图</button>
                     </div>
             </div>
@@ -4183,13 +4403,9 @@ class NewsAnalyzer:
             update_info=self.update_info if CONFIG["SHOW_VERSION_UPDATE"] else None
         )
         
-        # 保存昨天的归档HTML
+        # 不需要重新生成昨天的归档HTML（已在昨天运行时生成）
         archive_dir = Path("archive")
         archive_dir.mkdir(exist_ok=True)
-        yesterday_html_file = archive_dir / f"{yesterday_str}.html"
-        with open(yesterday_html_file, "w", encoding="utf-8") as f:
-            f.write(html_content)
-        print(f"已保存昨天的归档HTML: {yesterday_html_file}")
         
         # 生成RSS（包含昨天的数据）
         generate_rss_feed(
