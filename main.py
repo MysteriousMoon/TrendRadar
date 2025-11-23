@@ -1669,7 +1669,7 @@ def render_html_content(
     mode: str = "daily",
     update_info: Optional[Dict] = None,
 ) -> str:
-    """渲染HTML内容 - 暗色模式 + 单栏紧凑版"""
+    """渲染HTML内容 - 自适应亮/暗模式 + 单栏紧凑版"""
     
     hot_news_count = sum(len(stat["titles"]) for stat in report_data["stats"])
     now = get_configured_time()
@@ -1691,32 +1691,92 @@ def render_html_content(
         <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
         <style>
             :root {{
-                /* --- 深色模式配色 --- */
-                --bg-page: #0f172a;        /* 页面背景 */
-                --bg-card: #1e293b;        /* 卡片背景 */
-                --bg-header: #1e293b;      /* 头部背景 */
+                /* === 默认亮色模式 (Light Mode) === */
+                --bg-page: #f1f5f9;
+                --bg-card: #ffffff;
+                --bg-header: #ffffff;
                 
-                --text-main: #f1f5f9;      /* 主文字 */
-                --text-sub: #94a3b8;       /* 次要文字 */
-                --text-muted: #64748b;     /* 弱文字 */
+                --text-main: #1e293b;
+                --text-sub: #64748b;
+                --text-muted: #94a3b8;
                 
-                --border: #334155;         /* 边框 */
-                --accent: #38bdf8;         /* 亮蓝 */
+                --border: #e2e8f0;
+                --accent: #2563eb;
+                --accent-bg: #eff6ff;
                 
                 /* 排名颜色 */
-                --rank-1: #fbbf24;
-                --rank-2: #cbd5e1;
-                --rank-3: #d97706;
-                --rank-bg-norm: #334155;
+                --rank-1: #f59e0b;
+                --rank-2: #94a3b8;
+                --rank-3: #b45309;
+                --rank-bg-norm: #f1f5f9;
                 
                 /* 标签背景 */
-                --tag-hot-bg: rgba(239, 68, 68, 0.15);
-                --tag-hot-text: #fca5a5;
-                --tag-count-bg: rgba(34, 197, 94, 0.15);
-                --tag-count-text: #86efac;
+                --tag-hot-bg: #fef2f2;
+                --tag-hot-text: #dc2626;
+                --tag-hot-border: #fee2e2;
+                
+                --tag-count-bg: #f0fdf4;
+                --tag-count-text: #166534;
+                --tag-count-border: #dcfce7;
+                
+                --shadow: rgba(0, 0, 0, 0.05);
+            }}
+
+            /* === 暗色模式覆盖 (Dark Mode) === */
+            @media (prefers-color-scheme: dark) {{
+                :root {{
+                    --bg-page: #0f172a;
+                    --bg-card: #1e293b;
+                    --bg-header: #1e293b;
+                    
+                    --text-main: #f1f5f9;
+                    --text-sub: #94a3b8;
+                    --text-muted: #64748b;
+                    
+                    --border: #334155;
+                    --accent: #38bdf8;
+                    --accent-bg: rgba(56, 189, 248, 0.15);
+                    
+                    --rank-1: #fbbf24;
+                    --rank-2: #cbd5e1;
+                    --rank-3: #d97706;
+                    --rank-bg-norm: #334155;
+                    
+                    --tag-hot-bg: rgba(239, 68, 68, 0.15);
+                    --tag-hot-text: #fca5a5;
+                    --tag-hot-border: rgba(239, 68, 68, 0.3);
+                    
+                    --tag-count-bg: rgba(34, 197, 94, 0.15);
+                    --tag-count-text: #86efac;
+                    --tag-count-border: rgba(34, 197, 94, 0.3);
+                    
+                    --shadow: rgba(0, 0, 0, 0.3);
+                }}
+            }}
+
+            /* 手动切换类 - 强制深色 */
+            body.dark-mode {{
+                --bg-page: #0f172a; --bg-card: #1e293b; --bg-header: #1e293b;
+                --text-main: #f1f5f9; --text-sub: #94a3b8; --text-muted: #64748b;
+                --border: #334155; --accent: #38bdf8; --accent-bg: rgba(56, 189, 248, 0.15);
+                --rank-1: #fbbf24; --rank-2: #cbd5e1; --rank-3: #d97706; --rank-bg-norm: #334155;
+                --tag-hot-bg: rgba(239, 68, 68, 0.15); --tag-hot-text: #fca5a5; --tag-hot-border: rgba(239, 68, 68, 0.3);
+                --tag-count-bg: rgba(34, 197, 94, 0.15); --tag-count-text: #86efac; --tag-count-border: rgba(34, 197, 94, 0.3);
+                --shadow: rgba(0, 0, 0, 0.3);
+            }}
+
+            /* 手动切换类 - 强制浅色 */
+            body.light-mode {{
+                --bg-page: #f1f5f9; --bg-card: #ffffff; --bg-header: #ffffff;
+                --text-main: #1e293b; --text-sub: #64748b; --text-muted: #94a3b8;
+                --border: #e2e8f0; --accent: #2563eb; --accent-bg: #eff6ff;
+                --rank-1: #f59e0b; --rank-2: #94a3b8; --rank-3: #b45309; --rank-bg-norm: #f1f5f9;
+                --tag-hot-bg: #fef2f2; --tag-hot-text: #dc2626; --tag-hot-border: #fee2e2;
+                --tag-count-bg: #f0fdf4; --tag-count-text: #166534; --tag-count-border: #dcfce7;
+                --shadow: rgba(0, 0, 0, 0.05);
             }}
             
-            * {{ box-sizing: border-box; }}
+            * {{ box-sizing: border-box; transition: background-color 0.3s, color 0.1s, border-color 0.2s; }}
             
             body {{ 
                 font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -1728,7 +1788,7 @@ def render_html_content(
             }}
             
             .container {{
-                max-width: 800px; /* 单栏最佳阅读宽度 */
+                max-width: 800px;
                 margin: 0 auto;
             }}
             
@@ -1740,20 +1800,23 @@ def render_html_content(
                 margin-bottom: 24px;
                 border: 1px solid var(--border);
                 position: relative;
-                box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+                box-shadow: 0 4px 6px -1px var(--shadow);
             }}
             
             .header-title {{ font-size: 22px; font-weight: 800; color: var(--text-main); margin: 0 0 6px 0; }}
             .header-meta {{ color: var(--text-sub); font-size: 12px; display: flex; gap: 12px; align-items: center; }}
-            .header-badge {{ background: rgba(56, 189, 248, 0.15); color: var(--accent); padding: 2px 8px; border-radius: 4px; font-weight: 600; font-size: 11px; }}
+            .header-badge {{ background: var(--accent-bg); color: var(--accent); padding: 2px 8px; border-radius: 4px; font-weight: 600; font-size: 11px; }}
             
-            .save-buttons {{ position: absolute; top: 20px; right: 24px; display: flex; gap: 8px; }}
-            .save-btn {{
+            /* 按钮组 */
+            .header-actions {{ position: absolute; top: 20px; right: 24px; display: flex; gap: 8px; }}
+            
+            .btn {{
                 background: var(--text-main); color: var(--bg-page); border: none; padding: 6px 12px;
                 border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 700;
-                transition: opacity 0.2s;
+                display: flex; align-items: center; justify-content: center;
             }}
-            .save-btn:hover {{ opacity: 0.9; }}
+            .btn-icon {{ background: var(--border); color: var(--text-main); padding: 6px; width: 28px; }}
+            .btn:hover {{ opacity: 0.9; }}
             
             /* --- 话题组 --- */
             .topic-section {{ margin-bottom: 32px; }}
@@ -1761,14 +1824,9 @@ def render_html_content(
             .topic-title {{ font-size: 18px; font-weight: 800; color: var(--text-main); margin-right: 10px; }}
             .topic-count {{ font-size: 12px; color: var(--text-sub); background: var(--border); padding: 2px 8px; border-radius: 10px; font-weight: 600; }}
             
-            /* --- 卡片列表 (单栏堆叠) --- */
-            .cards-container {{
-                display: flex;
-                flex-direction: column;
-                gap: 10px; /* 卡片垂直间距 */
-            }}
+            /* --- 卡片列表 --- */
+            .cards-container {{ display: flex; flex-direction: column; gap: 10px; }}
             
-            /* --- 新闻卡片 --- */
             .news-card {{
                 background: var(--bg-card);
                 border-radius: 8px;
@@ -1777,27 +1835,28 @@ def render_html_content(
                 display: flex;
                 gap: 12px;
                 align-items: flex-start;
-                box-shadow: 0 1px 2px rgba(0,0,0,0.2);
-                transition: border-color 0.2s;
+                box-shadow: 0 1px 2px var(--shadow);
             }}
             .news-card:hover {{ border-color: var(--text-sub); }}
             
-            /* 排名徽章 */
             .card-rank {{ padding-top: 2px; min-width: 24px; }}
             .rank-badge {{
                 width: 24px; height: 24px; border-radius: 6px;
                 display: flex; align-items: center; justify-content: center;
                 font-weight: 700; font-size: 13px; font-family: "Roboto Mono", monospace;
             }}
-            .rank-1 .rank-badge {{ background: var(--rank-1); color: #000; box-shadow: 0 0 8px rgba(251, 191, 36, 0.3); }}
-            .rank-2 .rank-badge {{ background: var(--rank-2); color: #000; }}
-            .rank-3 .rank-badge {{ background: var(--rank-3); color: #000; }}
+            .rank-1 .rank-badge {{ background: var(--rank-1); color: white; box-shadow: 0 0 8px rgba(251, 191, 36, 0.3); }}
+            .rank-2 .rank-badge {{ background: var(--rank-2); color: white; }}
+            .rank-3 .rank-badge {{ background: var(--rank-3); color: white; }}
             .rank-norm .rank-badge {{ background: var(--rank-bg-norm); color: var(--text-sub); font-weight: 600; }}
+            /* 暗色模式下修正金银铜文字颜色 */
+            @media (prefers-color-scheme: dark) {{
+                .rank-1 .rank-badge, .rank-2 .rank-badge, .rank-3 .rank-badge {{ color: #000; }}
+            }}
+            body.dark-mode .rank-1 .rank-badge, body.dark-mode .rank-2 .rank-badge, body.dark-mode .rank-3 .rank-badge {{ color: #000; }}
             
-            /* 内容区域 */
             .card-content {{ flex: 1; display: flex; flex-direction: column; gap: 4px; min-width: 0; }}
             
-            /* Meta行 */
             .meta-row {{ display: flex; justify-content: space-between; align-items: center; font-size: 11px; }}
             .meta-left {{ display: flex; align-items: center; gap: 8px; color: var(--text-sub); }}
             .meta-right {{ display: flex; align-items: center; gap: 6px; }}
@@ -1805,19 +1864,17 @@ def render_html_content(
             .source-badge {{ display: flex; align-items: center; gap: 5px; font-weight: 500; color: var(--text-sub); }}
             .source-icon {{ width: 5px; height: 5px; border-radius: 50%; background: var(--text-muted); }}
             
-            /* 标签 */
             .stat-tag {{ padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 600; line-height: 1.2; }}
-            .tag-hot {{ background: var(--tag-hot-bg); color: var(--tag-hot-text); border: 1px solid rgba(239, 68, 68, 0.2); }}
-            .tag-count {{ background: var(--tag-count-bg); color: var(--tag-count-text); border: 1px solid rgba(34, 197, 94, 0.2); }}
+            .tag-hot {{ background: var(--tag-hot-bg); color: var(--tag-hot-text); border: 1px solid var(--tag-hot-border); }}
+            .tag-count {{ background: var(--tag-count-bg); color: var(--tag-count-text); border: 1px solid var(--tag-count-border); }}
             
-            /* 标题 */
             .news-link {{
                 font-size: 15px; font-weight: 700; color: var(--text-main); text-decoration: none;
                 line-height: 1.4; display: block; letter-spacing: 0.01em;
             }}
             .news-link:hover {{ color: var(--accent); }}
             
-            /* --- 新增热点 (保持Grid紧凑) --- */
+            /* --- 新增热点 --- */
             .new-section {{ margin-top: 32px; padding-top: 24px; border-top: 1px dashed var(--border); }}
             .new-grid-container {{ display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }}
             @media (min-width: 800px) {{ .new-grid-container {{ grid-template-columns: repeat(3, 1fr); }} }}
@@ -1827,10 +1884,11 @@ def render_html_content(
                 padding: 8px 12px; display: flex; align-items: center; gap: 8px;
             }}
             
-            /* Footer */
             .footer {{ margin-top: 40px; text-align: center; color: var(--text-muted); font-size: 12px; padding-top: 20px; border-top: 1px solid var(--border); }}
             .footer a {{ color: var(--text-sub); }}
-            .error-box {{ background: rgba(190, 18, 60, 0.2); color: #fda4af; padding: 12px; border-radius: 8px; margin-bottom: 20px; font-size: 12px; border: 1px solid rgba(190, 18, 60, 0.4); }}
+            
+            /* 错误框适配 */
+            .error-box {{ background: var(--tag-hot-bg); color: var(--tag-hot-text); padding: 12px; border-radius: 8px; margin-bottom: 20px; font-size: 12px; border: 1px solid var(--tag-hot-border); }}
         </style>
     </head>
     <body>
@@ -1842,10 +1900,10 @@ def render_html_content(
                     <span>{html_escape(sub_title)}</span>
                     <span>收录 {total_titles} / 热点 {hot_news_count}</span>
                 </div>
-                <div class="save-buttons">
-                    <button class="save-btn" onclick="saveAsImage()">保存长图</button>
-                    <button class="save-btn" onclick="saveAsMultipleImages()">分段保存</button>
-                </div>
+                <div class="header-actions">
+                    <button class="btn btn-icon" onclick="toggleTheme()" title="切换主题">🌗</button>
+                    <button class="btn" onclick="saveAsImage()">保存长图</button>
+                    </div>
             </div>
 
             <div class="content">"""
@@ -1883,10 +1941,8 @@ def render_html_content(
                 link = title_data.get("mobile_url") or title_data.get("url", "")
                 appear_count = title_data.get("count", 1)
                 
-                # 时间清洗逻辑
                 raw_time = title_data.get("time_display", "")
-                clean_time = raw_time.replace("[", "").replace("]", "")
-                clean_time = clean_time.replace("时", ":").replace("分", "").replace(" ~ ", "-")
+                clean_time = raw_time.replace("[", "").replace("]", "").replace("时", ":").replace("分", "").replace(" ~ ", "-")
                 
                 html += f"""
                 <div class="news-card {rank_style_class}">
@@ -1974,25 +2030,49 @@ def render_html_content(
         </div>
         
         <script>
+            // 切换主题逻辑
+            function toggleTheme() {
+                const body = document.body;
+                if (body.classList.contains('dark-mode')) {
+                    body.classList.remove('dark-mode');
+                    body.classList.add('light-mode');
+                } else if (body.classList.contains('light-mode')) {
+                    body.classList.remove('light-mode');
+                    body.classList.add('dark-mode');
+                } else {
+                    // 当前无强制类，检测系统偏好
+                    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+                        body.classList.add('light-mode');
+                    } else {
+                        body.classList.add('dark-mode');
+                    }
+                }
+            }
+
             async function saveAsImage() {
                 const button = event.target;
                 const originalText = button.textContent;
                 button.textContent = 'Processing...'; button.disabled = true;
                 
                 const container = document.querySelector('.container');
-                const btns = document.querySelector('.save-buttons');
-                btns.style.display = 'none';
+                const actions = document.querySelector('.header-actions');
+                actions.style.display = 'none'; // 截图时隐藏按钮
                 
                 try {
                     await new Promise(r => setTimeout(r, 200));
+                    
+                    // 动态获取当前背景色，确保截图颜色正确
+                    const computedStyle = window.getComputedStyle(document.body);
+                    const bgColor = computedStyle.backgroundColor;
+                    
                     const canvas = await html2canvas(container, {
                         scale: 2,
-                        backgroundColor: '#0f172a',
+                        backgroundColor: bgColor, // 使用当前动态背景色
                         useCORS: true
                     });
                     
                     const link = document.createElement('a');
-                    link.download = `TrendRadar_Dark_${new Date().getTime()}.png`;
+                    link.download = `TrendRadar_${new Date().getTime()}.png`;
                     link.href = canvas.toDataURL('image/png');
                     link.click();
                     
@@ -2001,12 +2081,9 @@ def render_html_content(
                     console.error(e);
                     button.textContent = 'Error';
                 } finally {
-                    btns.style.display = 'flex';
+                    actions.style.display = 'flex';
                     setTimeout(() => { button.disabled = false; button.textContent = originalText; }, 2000);
                 }
-            }
-            async function saveAsMultipleImages() {
-                alert('Use "Long Image" for best results.');
             }
         </script>
     </body>
