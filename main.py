@@ -257,7 +257,7 @@ def format_date_folder():
 
 def format_time_filename():
     """格式化时间文件名"""
-    return get_configured_time().strftime("%H时%M分")
+    return get_configured_time().strftime("%H:%M")
 
 
 def clean_title(title: str) -> str:
@@ -1996,7 +1996,7 @@ def render_html_content(
                 appear_count = title_data.get("count", 1)
                 
                 raw_time = title_data.get("time_display", "")
-                clean_time = raw_time.replace("[", "").replace("]", "").replace("时", ":").replace("分", "").replace(" ~ ", "-")
+                clean_time = raw_time.replace("[", "").replace("]", "").replace("时", ":").replace("分", "").replace(" ~ ", " - ")
                 
                 html += f"""
                 <div class="news-card {rank_style_class}">
