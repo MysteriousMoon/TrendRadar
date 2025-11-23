@@ -2175,7 +2175,7 @@ def render_html_content(
                 </div>
                 <div class="header-actions">
                     <button class="btn btn-icon" onclick="toggleTheme()" title="切换主题">🌗</button>
-                    <button class="btn" onclick="window.location.href='archive/index.html'">Archive</button>
+                    <button class="btn" onclick="window.location.href='/TrendRadar/archive/index.html'">Archive</button>
                     <button class="btn" onclick="saveAsImage()">保存长图</button>
                     </div>
             </div>
