@@ -1917,8 +1917,12 @@ def generate_html_report(
     if is_daily_summary:
         # 保存到根目录的 index.html（最新版本）
         root_file_path = Path("index.html")
+        root_html_content = render_html_content(
+            report_data, total_titles, is_daily_summary, mode, update_info,
+            archive_path="archive/index.html"
+        )
         with open(root_file_path, "w", encoding="utf-8") as f:
-            f.write(html_content)
+            f.write(root_html_content)
         
         # 保存带日期的归档版本到 archive 文件夹（用于 RSS 链接）
         now = get_configured_time()
@@ -1926,8 +1930,12 @@ def generate_html_report(
         archive_dir.mkdir(exist_ok=True)
         dated_filename = f"{now.strftime('%Y-%m-%d')}.html"
         dated_file_path = archive_dir / dated_filename
+        archive_html_content = render_html_content(
+            report_data, total_titles, is_daily_summary, mode, update_info,
+            archive_path="index.html"
+        )
         with open(dated_file_path, "w", encoding="utf-8") as f:
-            f.write(html_content)
+            f.write(archive_html_content)
         print(f"已保存每日归档版本: archive/{dated_filename}")
         
         # 生成archive/index.html列表页面
@@ -1941,6 +1949,7 @@ def render_html_content(
     is_daily_summary: bool = False,
     mode: str = "daily",
     update_info: Optional[Dict] = None,
+    archive_path: str = "archive/index.html",
 ) -> str:
     """渲染HTML内容 - 自适应亮/暗模式 + 单栏紧凑版"""
     
@@ -2175,7 +2184,7 @@ def render_html_content(
                 </div>
                 <div class="header-actions">
                     <button class="btn btn-icon" onclick="toggleTheme()" title="切换主题">🌗</button>
-                    <button class="btn" onclick="window.location.href='/TrendRadar/archive/index.html'">Archive</button>
+                    <button class="btn" onclick="window.location.href='{archive_path}'">Archive</button>
                     <button class="btn" onclick="saveAsImage()">保存长图</button>
                     </div>
             </div>
