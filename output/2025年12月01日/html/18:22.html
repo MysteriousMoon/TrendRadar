@@ -1,0 +1,2335 @@
+
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>TrendRadar - 实时热点分析</title>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+        <style>
+            :root {
+                /* === 默认亮色模式 (Light Mode) === */
+                --bg-page: #f1f5f9;
+                --bg-card: #ffffff;
+                --bg-header: #ffffff;
+                
+                --text-main: #1e293b;
+                --text-sub: #64748b;
+                --text-muted: #94a3b8;
+                
+                --border: #e2e8f0;
+                --accent: #2563eb;
+                --accent-bg: #eff6ff;
+                
+                /* 排名颜色 */
+                --rank-1: #f59e0b;
+                --rank-2: #94a3b8;
+                --rank-3: #b45309;
+                --rank-bg-norm: #f1f5f9;
+                
+                /* 标签背景 */
+                --tag-hot-bg: #fef2f2;
+                --tag-hot-text: #dc2626;
+                --tag-hot-border: #fee2e2;
+                
+                --tag-count-bg: #f0fdf4;
+                --tag-count-text: #166534;
+                --tag-count-border: #dcfce7;
+                
+                --shadow: rgba(0, 0, 0, 0.05);
+            }
+
+            /* === 暗色模式覆盖 (Dark Mode) === */
+            @media (prefers-color-scheme: dark) {
+                :root {
+                    --bg-page: #0f172a;
+                    --bg-card: #1e293b;
+                    --bg-header: #1e293b;
+                    
+                    --text-main: #f1f5f9;
+                    --text-sub: #94a3b8;
+                    --text-muted: #64748b;
+                    
+                    --border: #334155;
+                    --accent: #38bdf8;
+                    --accent-bg: rgba(56, 189, 248, 0.15);
+                    
+                    --rank-1: #fbbf24;
+                    --rank-2: #cbd5e1;
+                    --rank-3: #d97706;
+                    --rank-bg-norm: #334155;
+                    
+                    --tag-hot-bg: rgba(239, 68, 68, 0.15);
+                    --tag-hot-text: #fca5a5;
+                    --tag-hot-border: rgba(239, 68, 68, 0.3);
+                    
+                    --tag-count-bg: rgba(34, 197, 94, 0.15);
+                    --tag-count-text: #86efac;
+                    --tag-count-border: rgba(34, 197, 94, 0.3);
+                    
+                    --shadow: rgba(0, 0, 0, 0.3);
+                }
+            }
+
+            /* 手动切换类 - 强制深色 */
+            body.dark-mode {
+                --bg-page: #0f172a; --bg-card: #1e293b; --bg-header: #1e293b;
+                --text-main: #f1f5f9; --text-sub: #94a3b8; --text-muted: #64748b;
+                --border: #334155; --accent: #38bdf8; --accent-bg: rgba(56, 189, 248, 0.15);
+                --rank-1: #fbbf24; --rank-2: #cbd5e1; --rank-3: #d97706; --rank-bg-norm: #334155;
+                --tag-hot-bg: rgba(239, 68, 68, 0.15); --tag-hot-text: #fca5a5; --tag-hot-border: rgba(239, 68, 68, 0.3);
+                --tag-count-bg: rgba(34, 197, 94, 0.15); --tag-count-text: #86efac; --tag-count-border: rgba(34, 197, 94, 0.3);
+                --shadow: rgba(0, 0, 0, 0.3);
+            }
+
+            /* 手动切换类 - 强制浅色 */
+            body.light-mode {
+                --bg-page: #f1f5f9; --bg-card: #ffffff; --bg-header: #ffffff;
+                --text-main: #1e293b; --text-sub: #64748b; --text-muted: #94a3b8;
+                --border: #e2e8f0; --accent: #2563eb; --accent-bg: #eff6ff;
+                --rank-1: #f59e0b; --rank-2: #94a3b8; --rank-3: #b45309; --rank-bg-norm: #f1f5f9;
+                --tag-hot-bg: #fef2f2; --tag-hot-text: #dc2626; --tag-hot-border: #fee2e2;
+                --tag-count-bg: #f0fdf4; --tag-count-text: #166534; --tag-count-border: #dcfce7;
+                --shadow: rgba(0, 0, 0, 0.05);
+            }
+            
+            * { box-sizing: border-box; transition: background-color 0.3s, color 0.1s, border-color 0.2s; }
+            
+            body { 
+                font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+                background-color: var(--bg-page);
+                color: var(--text-main);
+                margin: 0; 
+                padding: 20px;
+                line-height: 1.4;
+            }
+            
+            .container {
+                max-width: 800px;
+                margin: 0 auto;
+            }
+            
+            /* --- Header --- */
+            .header {
+                background: var(--bg-header);
+                padding: 20px 24px;
+                border-radius: 12px;
+                margin-bottom: 24px;
+                border: 1px solid var(--border);
+                position: relative;
+                box-shadow: 0 4px 6px -1px var(--shadow);
+            }
+            
+            .header-title { font-size: 22px; font-weight: 800; color: var(--text-main); margin: 0 0 6px 0; }
+            .header-meta { color: var(--text-sub); font-size: 12px; display: flex; gap: 12px; align-items: center; }
+            .header-badge { background: var(--accent-bg); color: var(--accent); padding: 2px 8px; border-radius: 4px; font-weight: 600; font-size: 11px; }
+            
+            /* 按钮组 */
+            .header-actions { position: absolute; top: 20px; right: 24px; display: flex; gap: 8px; }
+            
+            .btn {
+                background: var(--text-main); color: var(--bg-page); border: none; padding: 6px 12px;
+                border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 700;
+                display: flex; align-items: center; justify-content: center;
+            }
+            .btn-icon { background: var(--border); color: var(--text-main); padding: 6px; width: 28px; }
+            .btn:hover { opacity: 0.9; }
+            
+            /* --- 话题组 --- */
+            .topic-section { margin-bottom: 32px; }
+            .topic-header { display: flex; align-items: baseline; margin-bottom: 12px; padding-left: 4px; }
+            .topic-title { font-size: 18px; font-weight: 800; color: var(--text-main); margin-right: 10px; }
+            .topic-count { font-size: 12px; color: var(--text-sub); background: var(--border); padding: 2px 8px; border-radius: 10px; font-weight: 600; }
+            
+            /* --- 卡片列表 --- */
+            .cards-container { display: flex; flex-direction: column; gap: 10px; }
+            
+            .news-card {
+                background: var(--bg-card);
+                border-radius: 8px;
+                padding: 12px 16px;
+                border: 1px solid var(--border);
+                display: flex;
+                gap: 12px;
+                align-items: flex-start;
+                box-shadow: 0 1px 2px var(--shadow);
+            }
+            .news-card:hover { border-color: var(--text-sub); }
+            
+            .card-rank { padding-top: 2px; min-width: 24px; }
+            .rank-badge {
+                width: 24px; height: 24px; border-radius: 6px;
+                display: flex; align-items: center; justify-content: center;
+                font-weight: 700; font-size: 13px; font-family: "Roboto Mono", monospace;
+            }
+            .rank-1 .rank-badge { background: var(--rank-1); color: white; box-shadow: 0 0 8px rgba(251, 191, 36, 0.3); }
+            .rank-2 .rank-badge { background: var(--rank-2); color: white; }
+            .rank-3 .rank-badge { background: var(--rank-3); color: white; }
+            .rank-norm .rank-badge { background: var(--rank-bg-norm); color: var(--text-sub); font-weight: 600; }
+            /* 暗色模式下修正金银铜文字颜色 */
+            @media (prefers-color-scheme: dark) {
+                .rank-1 .rank-badge, .rank-2 .rank-badge, .rank-3 .rank-badge { color: #000; }
+            }
+            body.dark-mode .rank-1 .rank-badge, body.dark-mode .rank-2 .rank-badge, body.dark-mode .rank-3 .rank-badge { color: #000; }
+            
+            .card-content { flex: 1; display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+            
+            .meta-row { display: flex; justify-content: space-between; align-items: center; font-size: 11px; }
+            .meta-left { display: flex; align-items: center; gap: 8px; color: var(--text-sub); }
+            .meta-right { display: flex; align-items: center; gap: 6px; }
+            
+            .source-badge { display: flex; align-items: center; gap: 5px; font-weight: 500; color: var(--text-sub); }
+            .source-icon { width: 5px; height: 5px; border-radius: 50%; background: var(--text-muted); }
+            
+            .stat-tag { padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 600; line-height: 1.2; }
+            .tag-hot { background: var(--tag-hot-bg); color: var(--tag-hot-text); border: 1px solid var(--tag-hot-border); }
+            .tag-count { background: var(--tag-count-bg); color: var(--tag-count-text); border: 1px solid var(--tag-count-border); }
+            
+            .news-link {
+                font-size: 15px; font-weight: 700; color: var(--text-main); text-decoration: none;
+                line-height: 1.4; display: block; letter-spacing: 0.01em;
+            }
+            .news-link:hover { color: var(--accent); }
+            
+            /* --- 新增热点 --- */
+            .new-section { margin-top: 32px; padding-top: 24px; border-top: 1px dashed var(--border); }
+            .new-grid-container { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+            @media (min-width: 800px) { .new-grid-container { grid-template-columns: repeat(3, 1fr); } }
+            
+            .new-card-item {
+                background: var(--bg-card); border: 1px solid var(--border); border-radius: 6px;
+                padding: 8px 12px; display: flex; align-items: center; gap: 8px;
+            }
+            
+            .footer { margin-top: 40px; text-align: center; color: var(--text-muted); font-size: 12px; padding-top: 20px; border-top: 1px solid var(--border); }
+            .footer a { color: var(--text-sub); }
+            
+            /* 错误框适配 */
+            .error-box { background: var(--tag-hot-bg); color: var(--tag-hot-text); padding: 12px; border-radius: 8px; margin-bottom: 20px; font-size: 12px; border: 1px solid var(--tag-hot-border); }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="header">
+                <div class="header-title">实时热点分析</div>
+                <div class="header-meta">
+                    <span class="header-badge">TrendRadar</span>
+                    <span>18:22 · 实时</span>
+                    <span>收录 668 / 热点 77</span>
+                </div>
+                <div class="header-actions">
+                    <button class="btn btn-icon" onclick="toggleTheme()" title="切换主题">🌗</button>
+                    <button class="btn" onclick="window.location.href='archive/index.html'">Archive</button>
+                    <button class="btn" onclick="saveAsImage()">保存长图</button>
+                    </div>
+            </div>
+
+            <div class="content">
+            <div class="topic-section">
+                <div class="topic-header">
+                    <span class="topic-title">#美国 俄罗斯 欧盟 北约 联合国 中东</span>
+                    <span class="topic-count">34</span>
+                </div>
+                <div class="cards-container">
+                <div class="news-card rank-2">
+                    <div class="card-rank">
+                        <div class="rank-badge">2</div>
+                    </div>
+                    
+                    <div class="card-content">
+                        <div class="meta-row">
+                            <div class="meta-left">
+                                <span class="source-badge">
+                                    <span class="source-icon"></span>
+                                    格隆汇
+                                </span>
+                                <span style="color:var(--border)">|</span>
+                                <span>18:22</span>
+                            </div>
+                            <div class="meta-right">
+                                <span class="stat-tag tag-hot">🔥 2</span>
+                                
+                            </div>
+                        </div>
+                        
+                        <a href="https://www.gelonghui.com/news/5127749" target="_blank" class="news-link">烯石电车新材料(06128.HK)拟出售美国石墨生产项目</a>
+                    </div>
+                </div>
+                <div class="news-card rank-2">
+                    <div class="card-rank">
+                        <div class="rank-badge">2</div>
+                    </div>
+                    
+                    <div class="card-content">
+                        <div class="meta-row">
+                            <div class="meta-left">
+                                <span class="source-badge">
+                                    <span class="source-icon"></span>
+                                    知乎
+                                </span>
+                                <span style="color:var(--border)">|</span>
+                                <span>18:22</span>
+                            </div>
+                            <div class="meta-right">
+                                <span class="stat-tag tag-hot">🔥 2</span>
+                                
+                            </div>
+                        </div>
+                        
+                        <a href="https://www.zhihu.com/question/1978848330575529049" target="_blank" class="news-link">中国公民 2026 年 9 月 14 日前可免签前往俄罗斯，免签天数 30 天，有哪些信息值得关注？</a>
+                    </div>
+                </div>
+                <div class="news-card rank-norm">
+                    <div class="card-rank">
+                        <div class="rank-badge">4</div>
+                    </div>
+                    
+                    <div class="card-content">
+                        <div class="meta-row">
+                            <div class="meta-left">
+                                <span class="source-badge">
+                                    <span class="source-icon"></span>
+                                    参考消息
+                                </span>
+                                <span style="color:var(--border)">|</span>
+                                <span>18:22</span>
+                            </div>
+                            <div class="meta-right">
+                                <span class="stat-tag tag-hot">🔥 4</span>
+                                
+                            </div>
+                        </div>
+                        
+                        <a href="https://ckxxapp.ckxx.net/pages/2025/12/01/5db035b9c4f143069f3ea7d2602dccf4.html" target="_blank" class="news-link">北约扬言要对俄“先发制人”</a>
+                    </div>
+                </div>
+                <div class="news-card rank-norm">
+                    <div class="card-rank">
+                        <div class="rank-badge">5</div>
+                    </div>
+                    
+                    <div class="card-content">
+                        <div class="meta-row">
+                            <div class="meta-left">
+                                <span class="source-badge">
+                                    <span class="source-icon"></span>
+                                    快讯通
+                                </span>
+                                <span style="color:var(--border)">|</span>
+                                <span>18:22</span>
+                            </div>
+                            <div class="meta-right">
+                                <span class="stat-tag tag-hot">🔥 5</span>
+                                
+                            </div>
+                        </div>
+                        
+                        <a href="https://www.fastbull.com/cn/fastshort/3800314_100_1" target="_blank" class="news-link">美国财长贝森特：财政部正在调查有关明尼苏达州税收资金可能已被转移给索马里青年党（Al-Shabaab）的指控。</a>
+                    </div>
+                </div>
+                <div class="news-card rank-norm">
+                    <div class="card-rank">
+                        <div class="rank-badge">6</div>
+                    </div>
+                    
+                    <div class="card-content">
+                        <div class="meta-row">
+                            <div class="meta-left">
+                                <span class="source-badge">
+                                    <span class="source-icon"></span>
+                                    Solidot
+                                </span>
+                                <span style="color:var(--border)">|</span>
+                                <span>18:22</span>
+                            </div>
+                            <div class="meta-right">
+                                <span class="stat-tag tag-hot">🔥 6</span>
+                                
+                            </div>
+                        </div>
+                        
+                        <a href="https://www.solidot.org/story?sid=82929" target="_blank" class="news-link">因发射事故俄罗斯失去了唯一一个载人飞船发射场</a>
+                    </div>
+                </div>
+                <div class="news-card rank-norm">
+                    <div class="card-rank">
+                        <div class="rank-badge">6</div>
+                    </div>
+                    
+                    <div class="card-content">
+                        <div class="meta-row">
+                            <div class="meta-left">
+                                <span class="source-badge">
+                                    <span class="source-icon"></span>
+                                    金十数据
+                                </span>
+                                <span style="color:var(--border)">|</span>
+                                <span>18:22</span>
+                            </div>
+                            <div class="meta-right">
+                                <span class="stat-tag tag-hot">🔥 6</span>
+                                
+                            </div>
+                        </div>
+                        
+                        <a href="https://flash.jin10.com/detail/20251202063155809800" target="_blank" class="news-link">据Politico：欧盟同意取消对那些拒绝接回被拒移民的国家，所提供的贸易优惠待遇。</a>
+                    </div>
+                </div>
+                <div class="news-card rank-norm">
+                    <div class="card-rank">
+                        <div class="rank-badge">7</div>
+                    </div>
+                    
+                    <div class="card-content">
+                        <div class="meta-row">
+                            <div class="meta-left">
+                                <span class="source-badge">
+                                    <span class="source-icon"></span>
+                                    澎湃新闻
+                                </span>
+                                <span style="color:var(--border)">|</span>
+                                <span>18:22</span>
+                            </div>
+                            <div class="meta-right">
+                                <span class="stat-tag tag-hot">🔥 7</span>
+                                
+                            </div>
+                        </div>
+                        
+                        <a href="https://m.thepaper.cn/newsDetail_forward_32077158" target="_blank" class="news-link">中国公民即日起至2026年9月14日可免签前往俄罗斯</a>
+                    </div>
+                </div>
+                <div class="news-card rank-norm">
+                    <div class="card-rank">
+                        <div class="rank-badge">7</div>
+                    </div>
+                    
+                    <div class="card-content">
+                        <div class="meta-row">
+                            <div class="meta-left">
+                                <span class="source-badge">
+                                    <span class="source-icon"></span>
+                                    靠谱新闻
+                                </span>
+                                <span style="color:var(--border)">|</span>
+                                <span>18:22</span>
+                            </div>
+                            <div class="meta-right">
+                                <span class="stat-tag tag-hot">🔥 7</span>
+                                
+                            </div>
+                        </div>
+                        
+                        <a href="https://ici.radio-canada.ca/rci/zh-hans/%E6%96%B0%E9%97%BB/2210860/%E7%BE%8E%E5%9B%BD-%E8%A1%8C%E4%B8%9A-%E5%9B%A2%E4%BD%93-%E5%BC%BA%E7%83%88-%E6%94%AF%E6%8C%81-%E7%BB%AD%E7%AD%BE-%E5%8A%A0%E7%BE%8E%E5%A2%A8%E5%8D%8F%E5%AE%9A" target="_blank" class="news-link">美国行业团体强烈支持续签加美墨协定</a>
+                    </div>
+                </div>
+                <div class="news-card rank-norm">
+                    <div class="card-rank">
+                        <div class="rank-badge">8</div>
+                    </div>
+                    
+                    <div class="card-content">
+                        <div class="meta-row">
+                            <div class="meta-left">
+                                <span class="source-badge">
+                                    <span class="source-icon"></span>
+                                    凤凰网
+                                </span>
+                                <span style="color:var(--border)">|</span>
+                                <span>18:22</span>
+                            </div>
+                            <div class="meta-right">
+                                <span class="stat-tag tag-hot">🔥 8</span>
+                                
+                            </div>
+                        </div>
+                        
+                        <a href="https://news.ifeng.com/c/8ojrOAI0nLH" target="_blank" class="news-link">北约扬言：考虑对俄“先发制人”</a>
+                    </div>
+                </div>
+                <div class="news-card rank-norm">
+                    <div class="card-rank">
+                        <div class="rank-badge">8</div>
+                    </div>
+                    
+                    <div class="card-content">
+                        <div class="meta-row">
+                            <div class="meta-left">
+                                <span class="source-badge">
+                                    <span class="source-icon"></span>
+                                    金十数据
+                                </span>
+                                <span style="color:var(--border)">|</span>
+                                <span>18:22</span>
+                            </div>
+                            <div class="meta-right">
+                                <span class="stat-tag tag-hot">🔥 8</span>
+                                
+                            </div>
+                        </div>
+                        
+                        <a href="https://flash.jin10.com/detail/20251202062538615800" target="_blank" class="news-link">亚马逊在美国两座城市试点“闪送”服务</a>
+                    </div>
+                </div></div></div>
+            <div class="topic-section">
+                <div class="topic-header">
+                    <span class="topic-title">#AI 人工智能 AGI 大模型</span>
+                    <span class="topic-count">22</span>
+                </div>
+                <div class="cards-container">
+                <div class="news-card rank-1">
+                    <div class="card-rank">
+                        <div class="rank-badge">1</div>
+                    </div>
+                    
+                    <div class="card-content">
+                        <div class="meta-row">
+                            <div class="meta-left">
+                                <span class="source-badge">
+                                    <span class="source-icon"></span>
+                                    华尔街见闻 最热
+                                </span>
+                                <span style="color:var(--border)">|</span>
+                                <span>18:22</span>
+                            </div>
+                            <div class="meta-right">
+                                <span class="stat-tag tag-hot">🔥 1</span>
+                                
+                            </div>
+                        </div>
+                        
+                        <a href="https://wallstreetcn.com/articles/3760431" target="_blank" class="news-link">直接嵌入手机系统！豆包AI手机，帮你跨平台比价点外卖、自动回消息</a>
+                    </div>
+                </div>
+                <div class="news-card rank-1">
+                    <div class="card-rank">
+                        <div class="rank-badge">1</div>
+                    </div>
+                    
+                    <div class="card-content">
+                        <div class="meta-row">
+                            <div class="meta-left">
+                                <span class="source-badge">
+                                    <span class="source-icon"></span>
+                                    V2EX
+                                </span>
+                                <span style="color:var(--border)">|</span>
+                                <span>18:22</span>
+                            </div>
+                            <div class="meta-right">
+                                <span class="stat-tag tag-hot">🔥 1</span>
+                                
+                            </div>
+                        </div>
+                        
+                        <a href="https://www.v2ex.com/t/1176252" target="_blank" class="news-link">人类大脑还是比 AI 强太多了</a>
+                    </div>
+                </div>
+                <div class="news-card rank-2">
+                    <div class="card-rank">
+                        <div class="rank-badge">2</div>
+                    </div>
+                    
+                    <div class="card-content">
+                        <div class="meta-row">
+                            <div class="meta-left">
+                                <span class="source-badge">
+                                    <span class="source-icon"></span>
+                                    掘金
+                                </span>
+                                <span style="color:var(--border)">|</span>
+                                <span>18:22</span>
+                            </div>
+                            <div class="meta-right">
+                                <span class="stat-tag tag-hot">🔥 2</span>
+                                
+                            </div>
+                        </div>
+                        
+                        <a href="https://juejin.cn/post/7577653509862654002" target="_blank" class="news-link">3天，1人，从0到付费产品：AI时代个人开发者的生存指南</a>
+                    </div>
+                </div>
+                <div class="news-card rank-3">
+                    <div class="card-rank">
+                        <div class="rank-badge">3</div>
+                    </div>
+                    
+                    <div class="card-content">
+                        <div class="meta-row">
+                            <div class="meta-left">
+                                <span class="source-badge">
+                                    <span class="source-icon"></span>
+                                    格隆汇
+                                </span>
+                                <span style="color:var(--border)">|</span>
+                                <span>18:22</span>
+                            </div>
+                            <div class="meta-right">
+                                <span class="stat-tag tag-hot">🔥 3</span>
+                                
+                            </div>
+                        </div>
+                        
+                        <a href="https://www.gelonghui.com/news/5127748" target="_blank" class="news-link">SHANGHAI GROWTH(00770.HK)：安永辞任核数师</a>
+                    </div>
+                </div>
+                <div class="news-card rank-3">
+                    <div class="card-rank">
+                        <div class="rank-badge">3</div>
+                    </div>
+                    
+                    <div class="card-content">
+                        <div class="meta-row">
+                            <div class="meta-left">
+                                <span class="source-badge">
+                                    <span class="source-icon"></span>
+                                    掘金
+                                </span>
+                                <span style="color:var(--border)">|</span>
+                                <span>18:22</span>
+                            </div>
+                            <div class="meta-right">
+                                <span class="stat-tag tag-hot">🔥 3</span>
+                                
+                            </div>
+                        </div>
+                        
+                        <a href="https://juejin.cn/post/7578215424677003327" target="_blank" class="news-link">用 AI 做了几个超炫酷的 Flutter 动画，同时又差点被 AI 气死</a>
+                    </div>
+                </div>
+                <div class="news-card rank-3">
+                    <div class="card-rank">
+                        <div class="rank-badge">3</div>
+                    </div>
+                    
+                    <div class="card-content">
+                        <div class="meta-row">
+                            <div class="meta-left">
+                                <span class="source-badge">
+                                    <span class="source-icon"></span>
+                                    V2EX
+                                </span>
+                                <span style="color:var(--border)">|</span>
+                                <span>18:22</span>
+                            </div>
+                            <div class="meta-right">
+                                <span class="stat-tag tag-hot">🔥 3</span>
+                                
+                            </div>
+                        </div>
+                        
+                        <a href="https://www.v2ex.com/t/1176245" target="_blank" class="news-link">顶顶好用好看的 mermaid 图表设计工具更新了，可以来康康</a>
+                    </div>
+                </div>
+                <div class="news-card rank-norm">
+                    <div class="card-rank">
+                        <div class="rank-badge">5</div>
+                    </div>
+                    
+                    <div class="card-content">
+                        <div class="meta-row">
+                            <div class="meta-left">
+                                <span class="source-badge">
+                                    <span class="source-icon"></span>
+                                    V2EX
+                                </span>
+                                <span style="color:var(--border)">|</span>
+                                <span>18:22</span>
+                            </div>
+                            <div class="meta-right">
+                                <span class="stat-tag tag-hot">🔥 5</span>
+                                
+                            </div>
+                        </div>
+                        
+                        <a href="https://www.v2ex.com/t/1176240" target="_blank" class="news-link">AI 生成小红书封面和图文</a>
+                    </div>
+                </div>
+                <div class="news-card rank-norm">
+                    <div class="card-rank">
+                        <div class="rank-badge">6</div>
+                    </div>
+                    
+                    <div class="card-content">
+                        <div class="meta-row">
+                            <div class="meta-left">
+                                <span class="source-badge">
+                                    <span class="source-icon"></span>
+                                    靠谱新闻
+                                </span>
+                                <span style="color:var(--border)">|</span>
+                                <span>18:22</span>
+                            </div>
+                            <div class="meta-right">
+                                <span class="stat-tag tag-hot">🔥 6</span>
+                                
+                            </div>
+                        </div>
+                        
+                        <a href="https://ici.radio-canada.ca/rci/zh-hans/%E6%96%B0%E9%97%BB/2210916/%E7%89%9B%E6%B4%A5%E5%A4%A7%E5%AD%A6-%E5%87%BA%E7%89%88%E7%A4%BE-%E5%B9%B4%E5%BA%A6-%E8%AF%8D%E6%B1%87-rage-bait-%E6%84%A4%E6%80%92-%E8%AF%B1%E9%A5%B5" target="_blank" class="news-link">牛津大学出版社年度词汇：Rage Bait（愤怒诱饵）</a>
+                    </div>
+                </div>
+                <div class="news-card rank-norm">
+                    <div class="card-rank">
+                        <div class="rank-badge">7</div>
+                    </div>
+                    
+                    <div class="card-content">
+                        <div class="meta-row">
+                            <div class="meta-left">
+                                <span class="source-badge">
+                                    <span class="source-icon"></span>
+                                    格隆汇
+                                </span>
+                                <span style="color:var(--border)">|</span>
+                                <span>18:22</span>
+                            </div>
+                            <div class="meta-right">
+                                <span class="stat-tag tag-hot">🔥 7</span>
+                                
+                            </div>
+                        </div>
+                        
+                        <a href="https://www.gelonghui.com/news/5127688" target="_blank" class="news-link">美股异动丨阿里巴巴涨3.5% 夸克AI眼镜发布 打造端侧AI新入口</a>
+                    </div>
+                </div>
+                <div class="news-card rank-norm">
+                    <div class="card-rank">
+                        <div class="rank-badge">8</div>
+                    </div>
+                    
+                    <div class="card-content">
+                        <div class="meta-row">
+                            <div class="meta-left">
+                                <span class="source-badge">
+                                    <span class="source-icon"></span>
+                                    V2EX
+                                </span>
+                                <span style="color:var(--border)">|</span>
+                                <span>18:22</span>
+                            </div>
+                            <div class="meta-right">
+                                <span class="stat-tag tag-hot">🔥 8</span>
+                                
+                            </div>
+                        </div>
+                        
+                        <a href="https://www.v2ex.com/t/1176221" target="_blank" class="news-link">AI 打分项目 , 感觉还是客观的</a>
+                    </div>
+                </div></div></div>
+            <div class="topic-section">
+                <div class="topic-header">
+                    <span class="topic-title">#OpenAI ChatGPT Sora Sam Altman Claude Anthropic 谷歌 Google Gemini DeepMind 微软 Microsoft Copilot</span>
+                    <span class="topic-count">14</span>
+                </div>
+                <div class="cards-container">
+                <div class="news-card rank-2">
+                    <div class="card-rank">
+                        <div class="rank-badge">2</div>
+                    </div>
+                    
+                    <div class="card-content">
+                        <div class="meta-row">
+                            <div class="meta-left">
+                                <span class="source-badge">
+                                    <span class="source-icon"></span>
+                                    GitHub
+                                </span>
+                                <span style="color:var(--border)">|</span>
+                                <span>18:22</span>
+                            </div>
+                            <div class="meta-right">
+                                <span class="stat-tag tag-hot">🔥 2</span>
+                                
+                            </div>
+                        </div>
+                        
+                        <a href="https://github.com/google/adk-go" target="_blank" class="news-link">google /      adk-go</a>
+                    </div>
+                </div>
+                <div class="news-card rank-3">
+                    <div class="card-rank">
+                        <div class="rank-badge">3</div>
+                    </div>
+                    
+                    <div class="card-content">
+                        <div class="meta-row">
+                            <div class="meta-left">
+                                <span class="source-badge">
+                                    <span class="source-icon"></span>
+                                    雪球【热门股票】
+                                </span>
+                                <span style="color:var(--border)">|</span>
+                                <span>18:22</span>
+                            </div>
+                            <div class="meta-right">
+                                <span class="stat-tag tag-hot">🔥 3</span>
+                                
+                            </div>
+                        </div>
+                        
+                        <a href="https://xueqiu.com/s/GOOGL" target="_blank" class="news-link">谷歌A</a>
+                    </div>
+                </div>
+                <div class="news-card rank-3">
+                    <div class="card-rank">
+                        <div class="rank-badge">3</div>
+                    </div>
+                    
+                    <div class="card-content">
+                        <div class="meta-row">
+                            <div class="meta-left">
+                                <span class="source-badge">
+                                    <span class="source-icon"></span>
+                                    ProductHunt
+                                </span>
+                                <span style="color:var(--border)">|</span>
+                                <span>18:22</span>
+                            </div>
+                            <div class="meta-right">
+                                <span class="stat-tag tag-hot">🔥 3</span>
+                                
+                            </div>
+                        </div>
+                        
+                        <a href="https://www.producthunt.com/products/gemini-6?utm_campaign=producthunt-api&amp;utm_medium=api-v2&amp;utm_source=Application%3A+newsnow+%28ID%3A+239216%29" target="_blank" class="news-link">Gemini 3</a>
+                    </div>
+                </div>
+                <div class="news-card rank-norm">
+                    <div class="card-rank">
+                        <div class="rank-badge">6</div>
+                    </div>
+                    
+                    <div class="card-content">
+                        <div class="meta-row">
+                            <div class="meta-left">
+                                <span class="source-badge">
+                                    <span class="source-icon"></span>
+                                    华尔街见闻 最热
+                                </span>
+                                <span style="color:var(--border)">|</span>
+                                <span>18:22</span>
+                            </div>
+                            <div class="meta-right">
+                                <span class="stat-tag tag-hot">🔥 6</span>
+                                
+                            </div>
+                        </div>
+                        
+                        <a href="https://wallstreetcn.com/articles/3760468" target="_blank" class="news-link">开源最强！“拳打GPT 5”，“脚踢Gemini-3.0”，DeepSeek V3.2为何提升这么多？</a>
+                    </div>
+                </div>
+                <div class="news-card rank-norm">
+                    <div class="card-rank">
+                        <div class="rank-badge">10</div>
+                    </div>
+                    
+                    <div class="card-content">
+                        <div class="meta-row">
+                            <div class="meta-left">
+                                <span class="source-badge">
+                                    <span class="source-icon"></span>
+                                    Solidot
+                                </span>
+                                <span style="color:var(--border)">|</span>
+                                <span>18:22</span>
+                            </div>
+                            <div class="meta-right">
+                                <span class="stat-tag tag-hot">🔥 10</span>
+                                
+                            </div>
+                        </div>
+                        
+                        <a href="https://www.solidot.org/story?sid=82925" target="_blank" class="news-link">挪威财富基金支持要求微软披露低人权国家业务风险提案</a>
+                    </div>
+                </div>
+                <div class="news-card rank-norm">
+                    <div class="card-rank">
+                        <div class="rank-badge">10</div>
+                    </div>
+                    
+                    <div class="card-content">
+                        <div class="meta-row">
+                            <div class="meta-left">
+                                <span class="source-badge">
+                                    <span class="source-icon"></span>
+                                    Hacker News
+                                </span>
+                                <span style="color:var(--border)">|</span>
+                                <span>18:22</span>
+                            </div>
+                            <div class="meta-right">
+                                <span class="stat-tag tag-hot">🔥 10</span>
+                                
+                            </div>
+                        </div>
+                        
+                        <a href="https://news.ycombinator.com/item?id=46108563" target="_blank" class="news-link">Google unkills JPEG XL?</a>
+                    </div>
+                </div>
+                <div class="news-card rank-norm">
+                    <div class="card-rank">
+                        <div class="rank-badge">10</div>
+                    </div>
+                    
+                    <div class="card-content">
+                        <div class="meta-row">
+                            <div class="meta-left">
+                                <span class="source-badge">
+                                    <span class="source-icon"></span>
+                                    V2EX
+                                </span>
+                                <span style="color:var(--border)">|</span>
+                                <span>18:22</span>
+                            </div>
+                            <div class="meta-right">
+                                <span class="stat-tag tag-hot">🔥 10</span>
+                                
+                            </div>
+                        </div>
+                        
+                        <a href="https://www.v2ex.com/t/1176213" target="_blank" class="news-link">Gemini 聊天记录一键导出 Notion (支持 PicList/PicGo 图床 / 隐私开关 / 求各种填坑思路)</a>
+                    </div>
+                </div>
+                <div class="news-card rank-norm">
+                    <div class="card-rank">
+                        <div class="rank-badge">12</div>
+                    </div>
+                    
+                    <div class="card-content">
+                        <div class="meta-row">
+                            <div class="meta-left">
+                                <span class="source-badge">
+                                    <span class="source-icon"></span>
+                                    GitHub
+                                </span>
+                                <span style="color:var(--border)">|</span>
+                                <span>18:22</span>
+                            </div>
+                            <div class="meta-right">
+                                <span class="stat-tag tag-hot">🔥 12</span>
+                                
+                            </div>
+                        </div>
+                        
+                        <a href="https://github.com/microsoft/call-center-ai" target="_blank" class="news-link">microsoft /      call-center-ai</a>
+                    </div>
+                </div>
+                <div class="news-card rank-norm">
+                    <div class="card-rank">
+                        <div class="rank-badge">14</div>
+                    </div>
+                    
+                    <div class="card-content">
+                        <div class="meta-row">
+                            <div class="meta-left">
+                                <span class="source-badge">
+                                    <span class="source-icon"></span>
+                                    Solidot
+                                </span>
+                                <span style="color:var(--border)">|</span>
+                                <span>18:22</span>
+                            </div>
+                            <div class="meta-right">
+                                <span class="stat-tag tag-hot">🔥 14</span>
+                                
+                            </div>
+                        </div>
+                        
+                        <a href="https://www.solidot.org/story?sid=82921" target="_blank" class="news-link">荷兰大学反思对微软软件的依赖</a>
+                    </div>
+                </div>
+                <div class="news-card rank-norm">
+                    <div class="card-rank">
+                        <div class="rank-badge">14</div>
+                    </div>
+                    
+                    <div class="card-content">
+                        <div class="meta-row">
+                            <div class="meta-left">
+                                <span class="source-badge">
+                                    <span class="source-icon"></span>
+                                    ProductHunt
+                                </span>
+                                <span style="color:var(--border)">|</span>
+                                <span>18:22</span>
+                            </div>
+                            <div class="meta-right">
+                                <span class="stat-tag tag-hot">🔥 14</span>
+                                
+                            </div>
+                        </div>
+                        
+                        <a href="https://www.producthunt.com/products/google-antigravity?utm_campaign=producthunt-api&amp;utm_medium=api-v2&amp;utm_source=Application%3A+newsnow+%28ID%3A+239216%29" target="_blank" class="news-link">Google Antigravity</a>
+                    </div>
+                </div></div></div>
+            <div class="topic-section">
+                <div class="topic-header">
+                    <span class="topic-title">#美联储 鲍威尔 欧洲央行 降息 加息 CPI PPI 非农 通胀</span>
+                    <span class="topic-count">14</span>
+                </div>
+                <div class="cards-container">
+                <div class="news-card rank-2">
+                    <div class="card-rank">
+                        <div class="rank-badge">2</div>
+                    </div>
+                    
+                    <div class="card-content">
+                        <div class="meta-row">
+                            <div class="meta-left">
+                                <span class="source-badge">
+                                    <span class="source-icon"></span>
+                                    金十数据
+                                </span>
+                                <span style="color:var(--border)">|</span>
+                                <span>18:22</span>
+                            </div>
+                            <div class="meta-right">
+                                <span class="stat-tag tag-hot">🔥 2</span>
+                                
+                            </div>
+                        </div>
+                        
+                        <a href="https://flash.jin10.com/detail/20251202070048815800" target="_blank" class="news-link">韩国11月CPI月率 -0.2%，预期-0.25%，前值0.30%。</a>
+                    </div>
+                </div>
+                <div class="news-card rank-3">
+                    <div class="card-rank">
+                        <div class="rank-badge">3</div>
+                    </div>
+                    
+                    <div class="card-content">
+                        <div class="meta-row">
+                            <div class="meta-left">
+                                <span class="source-badge">
+                                    <span class="source-icon"></span>
+                                    华尔街见闻 最热
+                                </span>
+                                <span style="color:var(--border)">|</span>
+                                <span>18:22</span>
+                            </div>
+                            <div class="meta-right">
+                                <span class="stat-tag tag-hot">🔥 3</span>
+                                
+                            </div>
+                        </div>
+                        
+                        <a href="https://wallstreetcn.com/articles/3760417" target="_blank" class="news-link">特朗普称“已决定新美联储主席人选”，哈塞特“市场对新主席消息的反应非常非常积极”</a>
+                    </div>
+                </div>
+                <div class="news-card rank-3">
+                    <div class="card-rank">
+                        <div class="rank-badge">3</div>
+                    </div>
+                    
+                    <div class="card-content">
+                        <div class="meta-row">
+                            <div class="meta-left">
+                                <span class="source-badge">
+                                    <span class="source-icon"></span>
+                                    金十数据
+                                </span>
+                                <span style="color:var(--border)">|</span>
+                                <span>18:22</span>
+                            </div>
+                            <div class="meta-right">
+                                <span class="stat-tag tag-hot">🔥 3</span>
+                                
+                            </div>
+                        </div>
+                        
+                        <a href="https://flash.jin10.com/detail/20251202070038863800" target="_blank" class="news-link">韩国11月CPI年率 2.4%，预期2.35%，前值2.40%。</a>
+                    </div>
+                </div>
+                <div class="news-card rank-norm">
+                    <div class="card-rank">
+                        <div class="rank-badge">4</div>
+                    </div>
+                    
+                    <div class="card-content">
+                        <div class="meta-row">
+                            <div class="meta-left">
+                                <span class="source-badge">
+                                    <span class="source-icon"></span>
+                                    华尔街见闻 最热
+                                </span>
+                                <span style="color:var(--border)">|</span>
+                                <span>18:22</span>
+                            </div>
+                            <div class="meta-right">
+                                <span class="stat-tag tag-hot">🔥 4</span>
+                                
+                            </div>
+                        </div>
+                        
+                        <a href="https://wallstreetcn.com/articles/3760425" target="_blank" class="news-link">日本股债双杀！央行行长强烈暗示12月加息：希望将利率提高至0.75%再谈以后</a>
+                    </div>
+                </div>
+                <div class="news-card rank-norm">
+                    <div class="card-rank">
+                        <div class="rank-badge">5</div>
+                    </div>
+                    
+                    <div class="card-content">
+                        <div class="meta-row">
+                            <div class="meta-left">
+                                <span class="source-badge">
+                                    <span class="source-icon"></span>
+                                    华尔街见闻 最热
+                                </span>
+                                <span style="color:var(--border)">|</span>
+                                <span>18:22</span>
+                            </div>
+                            <div class="meta-right">
+                                <span class="stat-tag tag-hot">🔥 5</span>
+                                
+                            </div>
+                        </div>
+                        
+                        <a href="https://wallstreetcn.com/articles/3760415" target="_blank" class="news-link">供应危机与降息预期夹击，白银和伦铜双双创历史新高</a>
+                    </div>
+                </div>
+                <div class="news-card rank-norm">
+                    <div class="card-rank">
+                        <div class="rank-badge">4</div>
+                    </div>
+                    
+                    <div class="card-content">
+                        <div class="meta-row">
+                            <div class="meta-left">
+                                <span class="source-badge">
+                                    <span class="source-icon"></span>
+                                    快讯通
+                                </span>
+                                <span style="color:var(--border)">|</span>
+                                <span>18:22</span>
+                            </div>
+                            <div class="meta-right">
+                                <span class="stat-tag tag-hot">🔥 4</span>
+                                
+                            </div>
+                        </div>
+                        
+                        <a href="https://www.fastbull.com/cn/fastshort/3800316_100_1" target="_blank" class="news-link">新西兰联储新行长表示，低通胀仍是关键使命。</a>
+                    </div>
+                </div>
+                <div class="news-card rank-norm">
+                    <div class="card-rank">
+                        <div class="rank-badge">6</div>
+                    </div>
+                    
+                    <div class="card-content">
+                        <div class="meta-row">
+                            <div class="meta-left">
+                                <span class="source-badge">
+                                    <span class="source-icon"></span>
+                                    快讯通
+                                </span>
+                                <span style="color:var(--border)">|</span>
+                                <span>18:22</span>
+                            </div>
+                            <div class="meta-right">
+                                <span class="stat-tag tag-hot">🔥 6</span>
+                                
+                            </div>
+                        </div>
+                        
+                        <a href="https://www.fastbull.com/cn/fastshort/3800286_100_1" target="_blank" class="news-link">瑞典央行副行长布雷曼：近期降息将改善新西兰的经济增长。</a>
+                    </div>
+                </div>
+                <div class="news-card rank-norm">
+                    <div class="card-rank">
+                        <div class="rank-badge">12</div>
+                    </div>
+                    
+                    <div class="card-content">
+                        <div class="meta-row">
+                            <div class="meta-left">
+                                <span class="source-badge">
+                                    <span class="source-icon"></span>
+                                    金十数据
+                                </span>
+                                <span style="color:var(--border)">|</span>
+                                <span>18:22</span>
+                            </div>
+                            <div class="meta-right">
+                                <span class="stat-tag tag-hot">🔥 12</span>
+                                
+                            </div>
+                        </div>
+                        
+                        <a href="https://flash.jin10.com/detail/20251202060124213800" target="_blank" class="news-link">美联储12月降息25个基点的概率为87.6%</a>
+                    </div>
+                </div>
+                <div class="news-card rank-norm">
+                    <div class="card-rank">
+                        <div class="rank-badge">15</div>
+                    </div>
+                    
+                    <div class="card-content">
+                        <div class="meta-row">
+                            <div class="meta-left">
+                                <span class="source-badge">
+                                    <span class="source-icon"></span>
+                                    金十数据
+                                </span>
+                                <span style="color:var(--border)">|</span>
+                                <span>18:22</span>
+                            </div>
+                            <div class="meta-right">
+                                <span class="stat-tag tag-hot">🔥 15</span>
+                                
+                            </div>
+                        </div>
+                        
+                        <a href="https://flash.jin10.com/detail/20251202055429080800" target="_blank" class="news-link">新西兰联储主席布雷曼：近期的降息将促进新西兰经济增长。</a>
+                    </div>
+                </div>
+                <div class="news-card rank-norm">
+                    <div class="card-rank">
+                        <div class="rank-badge">15</div>
+                    </div>
+                    
+                    <div class="card-content">
+                        <div class="meta-row">
+                            <div class="meta-left">
+                                <span class="source-badge">
+                                    <span class="source-icon"></span>
+                                    快讯通
+                                </span>
+                                <span style="color:var(--border)">|</span>
+                                <span>18:22</span>
+                            </div>
+                            <div class="meta-right">
+                                <span class="stat-tag tag-hot">🔥 15</span>
+                                
+                            </div>
+                        </div>
+                        
+                        <a href="https://www.fastbull.com/cn/fastshort/3800263_100_1" target="_blank" class="news-link">瑞典央行副行长布雷曼：我们的目标是支持经济健康、强劲和增长，同时保持低且稳定的通胀水平。</a>
+                    </div>
+                </div></div></div>
+            <div class="topic-section">
+                <div class="topic-header">
+                    <span class="topic-title">#战争 冲突 停火 袭击 核武器</span>
+                    <span class="topic-count">11</span>
+                </div>
+                <div class="cards-container">
+                <div class="news-card rank-2">
+                    <div class="card-rank">
+                        <div class="rank-badge">2</div>
+                    </div>
+                    
+                    <div class="card-content">
+                        <div class="meta-row">
+                            <div class="meta-left">
+                                <span class="source-badge">
+                                    <span class="source-icon"></span>
+                                    参考消息
+                                </span>
+                                <span style="color:var(--border)">|</span>
+                                <span>18:22</span>
+                            </div>
+                            <div class="meta-right">
+                                <span class="stat-tag tag-hot">🔥 2</span>
+                                
+                            </div>
+                        </div>
+                        
+                        <a href="https://ckxxapp.ckxx.net/pages/2025/12/01/7031c8d21ba24d95a005802a5de40d8c.html" target="_blank" class="news-link">日本前外相：高市言论“可能开启一条通往战争的道路”</a>
+                    </div>
+                </div>
+                <div class="news-card rank-norm">
+                    <div class="card-rank">
+                        <div class="rank-badge">8</div>
+                    </div>
+                    
+                    <div class="card-content">
+                        <div class="meta-row">
+                            <div class="meta-left">
+                                <span class="source-badge">
+                                    <span class="source-icon"></span>
+                                    参考消息
+                                </span>
+                                <span style="color:var(--border)">|</span>
+                                <span>18:22</span>
+                            </div>
+                            <div class="meta-right">
+                                <span class="stat-tag tag-hot">🔥 8</span>
+                                
+                            </div>
+                        </div>
+                        
+                        <a href="https://ckxxapp.ckxx.net/pages/2025/12/01/6ea2c497b57f4354b152d417d44cee7f.html" target="_blank" class="news-link">欧尔班：西方让俄乌冲突“变成一桩生意”</a>
+                    </div>
+                </div>
+                <div class="news-card rank-norm">
+                    <div class="card-rank">
+                        <div class="rank-badge">8</div>
+                    </div>
+                    
+                    <div class="card-content">
+                        <div class="meta-row">
+                            <div class="meta-left">
+                                <span class="source-badge">
+                                    <span class="source-icon"></span>
+                                    联合早报
+                                </span>
+                                <span style="color:var(--border)">|</span>
+                                <span>18:22</span>
+                            </div>
+                            <div class="meta-right">
+                                <span class="stat-tag tag-hot">🔥 8</span>
+                                
+                            </div>
+                        </div>
+                        
+                        <a href="https://www.zaochenbao.com/news/china/202512/0158738.html" target="_blank" class="news-link">塔吉克斯坦：过去一周五名中国公民在阿富汗越境袭击中遇害</a>
+                    </div>
+                </div>
+                <div class="news-card rank-norm">
+                    <div class="card-rank">
+                        <div class="rank-badge">10</div>
+                    </div>
+                    
+                    <div class="card-content">
+                        <div class="meta-row">
+                            <div class="meta-left">
+                                <span class="source-badge">
+                                    <span class="source-icon"></span>
+                                    bilibili 热搜
+                                </span>
+                                <span style="color:var(--border)">|</span>
+                                <span>18:22</span>
+                            </div>
+                            <div class="meta-right">
+                                <span class="stat-tag tag-hot">🔥 10</span>
+                                
+                            </div>
+                        </div>
+                        
+                        <a href="https://search.bilibili.com/all?keyword=%E6%88%98%E4%BA%89%E4%B8%AD%E8%AE%BE%E8%AE%A1%E7%9A%84puzzle%E8%B0%9C%E9%A2%98" target="_blank" class="news-link">战争中设计的puzzle谜题</a>
+                    </div>
+                </div>
+                <div class="news-card rank-norm">
+                    <div class="card-rank">
+                        <div class="rank-badge">14</div>
+                    </div>
+                    
+                    <div class="card-content">
+                        <div class="meta-row">
+                            <div class="meta-left">
+                                <span class="source-badge">
+                                    <span class="source-icon"></span>
+                                    金十数据
+                                </span>
+                                <span style="color:var(--border)">|</span>
+                                <span>18:22</span>
+                            </div>
+                            <div class="meta-right">
+                                <span class="stat-tag tag-hot">🔥 14</span>
+                                
+                            </div>
+                        </div>
+                        
+                        <a href="https://flash.jin10.com/detail/20251202055716240800" target="_blank" class="news-link">金十数据整理：俄乌冲突最新24小时局势跟踪（12月2日）</a>
+                    </div>
+                </div>
+                <div class="news-card rank-norm">
+                    <div class="card-rank">
+                        <div class="rank-badge">16</div>
+                    </div>
+                    
+                    <div class="card-content">
+                        <div class="meta-row">
+                            <div class="meta-left">
+                                <span class="source-badge">
+                                    <span class="source-icon"></span>
+                                    卫星通讯社
+                                </span>
+                                <span style="color:var(--border)">|</span>
+                                <span>18:22</span>
+                            </div>
+                            <div class="meta-right">
+                                <span class="stat-tag tag-hot">🔥 16</span>
+                                
+                            </div>
+                        </div>
+                        
+                        <a href="https://sputniknews.cn/20251202/1068658302.html" target="_blank" class="news-link">媒体：涉嫌在阿富汗塔吉克斯坦边境地区袭击中国公民的两名嫌疑人被抓获</a>
+                    </div>
+                </div>
+                <div class="news-card rank-norm">
+                    <div class="card-rank">
+                        <div class="rank-badge">16</div>
+                    </div>
+                    
+                    <div class="card-content">
+                        <div class="meta-row">
+                            <div class="meta-left">
+                                <span class="source-badge">
+                                    <span class="source-icon"></span>
+                                    靠谱新闻
+                                </span>
+                                <span style="color:var(--border)">|</span>
+                                <span>18:22</span>
+                            </div>
+                            <div class="meta-right">
+                                <span class="stat-tag tag-hot">🔥 16</span>
+                                
+                            </div>
+                        </div>
+                        
+                        <a href="https://www.dw.com/zh/塔吉克斯坦：5名中国公民上周在阿富汗跨境袭击中丧生/a-74970231" target="_blank" class="news-link">塔吉克斯坦：5名中国公民上周在阿富汗跨境袭击中丧生</a>
+                    </div>
+                </div>
+                <div class="news-card rank-norm">
+                    <div class="card-rank">
+                        <div class="rank-badge">18</div>
+                    </div>
+                    
+                    <div class="card-content">
+                        <div class="meta-row">
+                            <div class="meta-left">
+                                <span class="source-badge">
+                                    <span class="source-icon"></span>
+                                    联合早报
+                                </span>
+                                <span style="color:var(--border)">|</span>
+                                <span>18:22</span>
+                            </div>
+                            <div class="meta-right">
+                                <span class="stat-tag tag-hot">🔥 18</span>
+                                
+                            </div>
+                        </div>
+                        
+                        <a href="https://www.zaochenbao.com/news/china/202512/0158728.html" target="_blank" class="news-link">塔吉克边境地区再发生袭击案造成中国公民伤亡</a>
+                    </div>
+                </div>
+                <div class="news-card rank-norm">
+                    <div class="card-rank">
+                        <div class="rank-badge">20</div>
+                    </div>
+                    
+                    <div class="card-content">
+                        <div class="meta-row">
+                            <div class="meta-left">
+                                <span class="source-badge">
+                                    <span class="source-icon"></span>
+                                    卫星通讯社
+                                </span>
+                                <span style="color:var(--border)">|</span>
+                                <span>18:22</span>
+                            </div>
+                            <div class="meta-right">
+                                <span class="stat-tag tag-hot">🔥 20</span>
+                                
+                            </div>
+                        </div>
+                        
+                        <a href="https://sputniknews.cn/20251202/1068657657.html" target="_blank" class="news-link">土耳其前海军上将呼吁政府回应乌军袭击黑海油轮事件</a>
+                    </div>
+                </div>
+                <div class="news-card rank-norm">
+                    <div class="card-rank">
+                        <div class="rank-badge">22</div>
+                    </div>
+                    
+                    <div class="card-content">
+                        <div class="meta-row">
+                            <div class="meta-left">
+                                <span class="source-badge">
+                                    <span class="source-icon"></span>
+                                    参考消息
+                                </span>
+                                <span style="color:var(--border)">|</span>
+                                <span>18:22</span>
+                            </div>
+                            <div class="meta-right">
+                                <span class="stat-tag tag-hot">🔥 22</span>
+                                
+                            </div>
+                        </div>
+                        
+                        <a href="https://ckxxapp.ckxx.net/pages/2025/12/01/6dff378311f7478a9e16c55ee039f055.html" target="_blank" class="news-link">港媒：岛内谴责赖清德轻率谈战争制造恐慌</a>
+                    </div>
+                </div></div></div>
+            <div class="topic-section">
+                <div class="topic-header">
+                    <span class="topic-title">#财政部 发改委 房地产 楼市 汇率 人民币 美元 制造业 PMI</span>
+                    <span class="topic-count">6</span>
+                </div>
+                <div class="cards-container">
+                <div class="news-card rank-1">
+                    <div class="card-rank">
+                        <div class="rank-badge">1</div>
+                    </div>
+                    
+                    <div class="card-content">
+                        <div class="meta-row">
+                            <div class="meta-left">
+                                <span class="source-badge">
+                                    <span class="source-icon"></span>
+                                    联合早报
+                                </span>
+                                <span style="color:var(--border)">|</span>
+                                <span>18:22</span>
+                            </div>
+                            <div class="meta-right">
+                                <span class="stat-tag tag-hot">🔥 1</span>
+                                
+                            </div>
+                        </div>
+                        
+                        <a href="https://www.zaochenbao.com/news/china/202512/0158745.html" target="_blank" class="news-link">福建75亿元人民币大坝施工被曝偷工减料 官方成立调查组</a>
+                    </div>
+                </div>
+                <div class="news-card rank-1">
+                    <div class="card-rank">
+                        <div class="rank-badge">1</div>
+                    </div>
+                    
+                    <div class="card-content">
+                        <div class="meta-row">
+                            <div class="meta-left">
+                                <span class="source-badge">
+                                    <span class="source-icon"></span>
+                                    金十数据
+                                </span>
+                                <span style="color:var(--border)">|</span>
+                                <span>18:22</span>
+                            </div>
+                            <div class="meta-right">
+                                <span class="stat-tag tag-hot">🔥 1</span>
+                                
+                            </div>
+                        </div>
+                        
+                        <a href="https://flash.jin10.com/detail/20251202070122711800" target="_blank" class="news-link">现货白银周二小幅低开，现报57.84美元/盎司。</a>
+                    </div>
+                </div>
+                <div class="news-card rank-1">
+                    <div class="card-rank">
+                        <div class="rank-badge">1</div>
+                    </div>
+                    
+                    <div class="card-content">
+                        <div class="meta-row">
+                            <div class="meta-left">
+                                <span class="source-badge">
+                                    <span class="source-icon"></span>
+                                    快讯通
+                                </span>
+                                <span style="color:var(--border)">|</span>
+                                <span>18:22</span>
+                            </div>
+                            <div class="meta-right">
+                                <span class="stat-tag tag-hot">🔥 1</span>
+                                
+                            </div>
+                        </div>
+                        
+                        <a href="https://www.fastbull.com/cn/fastshort/3800330_100_1" target="_blank" class="news-link">特朗普政府表示，如果明尼苏达州不撤销违规颁发的商业驾照，可能扣留高达3040万美元的联邦资金。</a>
+                    </div>
+                </div>
+                <div class="news-card rank-norm">
+                    <div class="card-rank">
+                        <div class="rank-badge">12</div>
+                    </div>
+                    
+                    <div class="card-content">
+                        <div class="meta-row">
+                            <div class="meta-left">
+                                <span class="source-badge">
+                                    <span class="source-icon"></span>
+                                    卫星通讯社
+                                </span>
+                                <span style="color:var(--border)">|</span>
+                                <span>18:22</span>
+                            </div>
+                            <div class="meta-right">
+                                <span class="stat-tag tag-hot">🔥 12</span>
+                                
+                            </div>
+                        </div>
+                        
+                        <a href="https://sputniknews.cn/20251202/1068659119.html" target="_blank" class="news-link">俄副总理：2025年前九个月俄蒙贸易额增长5% 接近20亿美元</a>
+                    </div>
+                </div>
+                <div class="news-card rank-norm">
+                    <div class="card-rank">
+                        <div class="rank-badge">28</div>
+                    </div>
+                    
+                    <div class="card-content">
+                        <div class="meta-row">
+                            <div class="meta-left">
+                                <span class="source-badge">
+                                    <span class="source-icon"></span>
+                                    今日头条
+                                </span>
+                                <span style="color:var(--border)">|</span>
+                                <span>18:22</span>
+                            </div>
+                            <div class="meta-right">
+                                <span class="stat-tag tag-hot">🔥 28</span>
+                                
+                            </div>
+                        </div>
+                        
+                        <a href="https://www.toutiao.com/trending/7577611751588626458/" target="_blank" class="news-link">爱马仕继承人150亿美元财富失踪</a>
+                    </div>
+                </div>
+                <div class="news-card rank-norm">
+                    <div class="card-rank">
+                        <div class="rank-badge">30</div>
+                    </div>
+                    
+                    <div class="card-content">
+                        <div class="meta-row">
+                            <div class="meta-left">
+                                <span class="source-badge">
+                                    <span class="source-icon"></span>
+                                    联合早报
+                                </span>
+                                <span style="color:var(--border)">|</span>
+                                <span>18:22</span>
+                            </div>
+                            <div class="meta-right">
+                                <span class="stat-tag tag-hot">🔥 30</span>
+                                
+                            </div>
+                        </div>
+                        
+                        <a href="https://www.zaochenbao.com/news/politics/202512/0158706.html" target="_blank" class="news-link">全球100家军火制造商销售达6790亿美元 创纪录</a>
+                    </div>
+                </div></div></div>
+            <div class="topic-section">
+                <div class="topic-header">
+                    <span class="topic-title">#英伟达 NVIDIA 黄仁勋 AMD 苏姿丰</span>
+                    <span class="topic-count">4</span>
+                </div>
+                <div class="cards-container">
+                <div class="news-card rank-2">
+                    <div class="card-rank">
+                        <div class="rank-badge">2</div>
+                    </div>
+                    
+                    <div class="card-content">
+                        <div class="meta-row">
+                            <div class="meta-left">
+                                <span class="source-badge">
+                                    <span class="source-icon"></span>
+                                    雪球【热门股票】
+                                </span>
+                                <span style="color:var(--border)">|</span>
+                                <span>18:22</span>
+                            </div>
+                            <div class="meta-right">
+                                <span class="stat-tag tag-hot">🔥 2</span>
+                                
+                            </div>
+                        </div>
+                        
+                        <a href="https://xueqiu.com/s/NVDA" target="_blank" class="news-link">英伟达</a>
+                    </div>
+                </div>
+                <div class="news-card rank-norm">
+                    <div class="card-rank">
+                        <div class="rank-badge">6</div>
+                    </div>
+                    
+                    <div class="card-content">
+                        <div class="meta-row">
+                            <div class="meta-left">
+                                <span class="source-badge">
+                                    <span class="source-icon"></span>
+                                    财联社热门
+                                </span>
+                                <span style="color:var(--border)">|</span>
+                                <span>18:22</span>
+                            </div>
+                            <div class="meta-right">
+                                <span class="stat-tag tag-hot">🔥 6</span>
+                                
+                            </div>
+                        </div>
+                        
+                        <a href="https://www.cls.cn/detail/2216428" target="_blank" class="news-link">英伟达锁定EDA霸主！20亿美元入股新思科技扩大合作版图</a>
+                    </div>
+                </div>
+                <div class="news-card rank-norm">
+                    <div class="card-rank">
+                        <div class="rank-badge">8</div>
+                    </div>
+                    
+                    <div class="card-content">
+                        <div class="meta-row">
+                            <div class="meta-left">
+                                <span class="source-badge">
+                                    <span class="source-icon"></span>
+                                    华尔街见闻 最热
+                                </span>
+                                <span style="color:var(--border)">|</span>
+                                <span>18:22</span>
+                            </div>
+                            <div class="meta-right">
+                                <span class="stat-tag tag-hot">🔥 8</span>
+                                
+                            </div>
+                        </div>
+                        
+                        <a href="https://wallstreetcn.com/articles/3760464" target="_blank" class="news-link">孙正义称他“哭着”清仓英伟达：若非需要资金 原本一股也不会卖</a>
+                    </div>
+                </div>
+                <div class="news-card rank-norm">
+                    <div class="card-rank">
+                        <div class="rank-badge">9</div>
+                    </div>
+                    
+                    <div class="card-content">
+                        <div class="meta-row">
+                            <div class="meta-left">
+                                <span class="source-badge">
+                                    <span class="source-icon"></span>
+                                    财联社热门
+                                </span>
+                                <span style="color:var(--border)">|</span>
+                                <span>18:22</span>
+                            </div>
+                            <div class="meta-right">
+                                <span class="stat-tag tag-hot">🔥 9</span>
+                                
+                            </div>
+                        </div>
+                        
+                        <a href="https://www.cls.cn/detail/2216291" target="_blank" class="news-link">孙正义回应清仓英伟达：为了投AI，我是哭着卖的</a>
+                    </div>
+                </div></div></div>
+            <div class="topic-section">
+                <div class="topic-header">
+                    <span class="topic-title">#iPhone iPad Mac iOS 苹果 Apple</span>
+                    <span class="topic-count">4</span>
+                </div>
+                <div class="cards-container">
+                <div class="news-card rank-norm">
+                    <div class="card-rank">
+                        <div class="rank-badge">4</div>
+                    </div>
+                    
+                    <div class="card-content">
+                        <div class="meta-row">
+                            <div class="meta-left">
+                                <span class="source-badge">
+                                    <span class="source-icon"></span>
+                                    雪球【热门股票】
+                                </span>
+                                <span style="color:var(--border)">|</span>
+                                <span>18:22</span>
+                            </div>
+                            <div class="meta-right">
+                                <span class="stat-tag tag-hot">🔥 4</span>
+                                
+                            </div>
+                        </div>
+                        
+                        <a href="https://xueqiu.com/s/AAPL" target="_blank" class="news-link">苹果</a>
+                    </div>
+                </div>
+                <div class="news-card rank-norm">
+                    <div class="card-rank">
+                        <div class="rank-badge">5</div>
+                    </div>
+                    
+                    <div class="card-content">
+                        <div class="meta-row">
+                            <div class="meta-left">
+                                <span class="source-badge">
+                                    <span class="source-icon"></span>
+                                    Hacker News
+                                </span>
+                                <span style="color:var(--border)">|</span>
+                                <span>18:22</span>
+                            </div>
+                            <div class="meta-right">
+                                <span class="stat-tag tag-hot">🔥 5</span>
+                                
+                            </div>
+                        </div>
+                        
+                        <a href="https://news.ycombinator.com/item?id=46114144" target="_blank" class="news-link">Apple AI Chief Retiring After Siri Failure</a>
+                    </div>
+                </div>
+                <div class="news-card rank-norm">
+                    <div class="card-rank">
+                        <div class="rank-badge">9</div>
+                    </div>
+                    
+                    <div class="card-content">
+                        <div class="meta-row">
+                            <div class="meta-left">
+                                <span class="source-badge">
+                                    <span class="source-icon"></span>
+                                    金十数据
+                                </span>
+                                <span style="color:var(--border)">|</span>
+                                <span>18:22</span>
+                            </div>
+                            <div class="meta-right">
+                                <span class="stat-tag tag-hot">🔥 9</span>
+                                
+                            </div>
+                        </div>
+                        
+                        <a href="https://flash.jin10.com/detail/20251202061819637800" target="_blank" class="news-link">苹果任命AI业务副总裁</a>
+                    </div>
+                </div>
+                <div class="news-card rank-norm">
+                    <div class="card-rank">
+                        <div class="rank-badge">26</div>
+                    </div>
+                    
+                    <div class="card-content">
+                        <div class="meta-row">
+                            <div class="meta-left">
+                                <span class="source-badge">
+                                    <span class="source-icon"></span>
+                                    Hacker News
+                                </span>
+                                <span style="color:var(--border)">|</span>
+                                <span>18:22</span>
+                            </div>
+                            <div class="meta-right">
+                                <span class="stat-tag tag-hot">🔥 26</span>
+                                
+                            </div>
+                        </div>
+                        
+                        <a href="https://news.ycombinator.com/item?id=46111284" target="_blank" class="news-link">Intel could return to Apple computers in 2027</a>
+                    </div>
+                </div></div></div>
+            <div class="topic-section">
+                <div class="topic-header">
+                    <span class="topic-title">#比特币 BTC 以太坊 黄金 原油</span>
+                    <span class="topic-count">4</span>
+                </div>
+                <div class="cards-container">
+                <div class="news-card rank-2">
+                    <div class="card-rank">
+                        <div class="rank-badge">2</div>
+                    </div>
+                    
+                    <div class="card-content">
+                        <div class="meta-row">
+                            <div class="meta-left">
+                                <span class="source-badge">
+                                    <span class="source-icon"></span>
+                                    财联社热门
+                                </span>
+                                <span style="color:var(--border)">|</span>
+                                <span>18:22</span>
+                            </div>
+                            <div class="meta-right">
+                                <span class="stat-tag tag-hot">🔥 2</span>
+                                
+                            </div>
+                        </div>
+                        
+                        <a href="https://www.cls.cn/detail/2216342" target="_blank" class="news-link">美股三大期指集体下跌 比特币一度跌超7% | 今夜看点</a>
+                    </div>
+                </div>
+                <div class="news-card rank-norm">
+                    <div class="card-rank">
+                        <div class="rank-badge">5</div>
+                    </div>
+                    
+                    <div class="card-content">
+                        <div class="meta-row">
+                            <div class="meta-left">
+                                <span class="source-badge">
+                                    <span class="source-icon"></span>
+                                    财联社热门
+                                </span>
+                                <span style="color:var(--border)">|</span>
+                                <span>18:22</span>
+                            </div>
+                            <div class="meta-right">
+                                <span class="stat-tag tag-hot">🔥 5</span>
+                                
+                            </div>
+                        </div>
+                        
+                        <a href="https://www.cls.cn/detail/2216138" target="_blank" class="news-link">一图看懂|“蹦”的比黄金还高，白银的“天花板”在哪？</a>
+                    </div>
+                </div>
+                <div class="news-card rank-norm">
+                    <div class="card-rank">
+                        <div class="rank-badge">5</div>
+                    </div>
+                    
+                    <div class="card-content">
+                        <div class="meta-row">
+                            <div class="meta-left">
+                                <span class="source-badge">
+                                    <span class="source-icon"></span>
+                                    格隆汇
+                                </span>
+                                <span style="color:var(--border)">|</span>
+                                <span>18:22</span>
+                            </div>
+                            <div class="meta-right">
+                                <span class="stat-tag tag-hot">🔥 5</span>
+                                
+                            </div>
+                        </div>
+                        
+                        <a href="https://www.gelonghui.com/news/5127690" target="_blank" class="news-link">比特币跌破84000美元</a>
+                    </div>
+                </div>
+                <div class="news-card rank-3">
+                    <div class="card-rank">
+                        <div class="rank-badge">3</div>
+                    </div>
+                    
+                    <div class="card-content">
+                        <div class="meta-row">
+                            <div class="meta-left">
+                                <span class="source-badge">
+                                    <span class="source-icon"></span>
+                                    快讯通
+                                </span>
+                                <span style="color:var(--border)">|</span>
+                                <span>18:22</span>
+                            </div>
+                            <div class="meta-right">
+                                <span class="stat-tag tag-hot">🔥 3</span>
+                                
+                            </div>
+                        </div>
+                        
+                        <a href="https://www.fastbull.com/cn/fastshort/3800324_100_1" target="_blank" class="news-link">全球最大黄金ETF基金（SPDR）：黄金持有量增加0.44%，即4.58吨。</a>
+                    </div>
+                </div></div></div>
+            <div class="topic-section">
+                <div class="topic-header">
+                    <span class="topic-title">#Linux Docker Kubernetes Apache CNCF VScode Cursor Antigravity</span>
+                    <span class="topic-count">3</span>
+                </div>
+                <div class="cards-container">
+                <div class="news-card rank-norm">
+                    <div class="card-rank">
+                        <div class="rank-badge">4</div>
+                    </div>
+                    
+                    <div class="card-content">
+                        <div class="meta-row">
+                            <div class="meta-left">
+                                <span class="source-badge">
+                                    <span class="source-icon"></span>
+                                    GitHub
+                                </span>
+                                <span style="color:var(--border)">|</span>
+                                <span>18:22</span>
+                            </div>
+                            <div class="meta-right">
+                                <span class="stat-tag tag-hot">🔥 4</span>
+                                
+                            </div>
+                        </div>
+                        
+                        <a href="https://github.com/yeongpin/cursor-free-vip" target="_blank" class="news-link">yeongpin /      cursor-free-vip</a>
+                    </div>
+                </div>
+                <div class="news-card rank-norm">
+                    <div class="card-rank">
+                        <div class="rank-badge">8</div>
+                    </div>
+                    
+                    <div class="card-content">
+                        <div class="meta-row">
+                            <div class="meta-left">
+                                <span class="source-badge">
+                                    <span class="source-icon"></span>
+                                    Solidot
+                                </span>
+                                <span style="color:var(--border)">|</span>
+                                <span>18:22</span>
+                            </div>
+                            <div class="meta-right">
+                                <span class="stat-tag tag-hot">🔥 8</span>
+                                
+                            </div>
+                        </div>
+                        
+                        <a href="https://www.solidot.org/story?sid=82927" target="_blank" class="news-link">Linux Kernel 6.18 释出</a>
+                    </div>
+                </div>
+                <div class="news-card rank-norm">
+                    <div class="card-rank">
+                        <div class="rank-badge">29</div>
+                    </div>
+                    
+                    <div class="card-content">
+                        <div class="meta-row">
+                            <div class="meta-left">
+                                <span class="source-badge">
+                                    <span class="source-icon"></span>
+                                    Hacker News
+                                </span>
+                                <span style="color:var(--border)">|</span>
+                                <span>18:22</span>
+                            </div>
+                            <div class="meta-right">
+                                <span class="stat-tag tag-hot">🔥 29</span>
+                                
+                            </div>
+                        </div>
+                        
+                        <a href="https://news.ycombinator.com/item?id=46104396" target="_blank" class="news-link">Games using anti-cheats and their compatibility with GNU/Linux or Wine/Proton</a>
+                    </div>
+                </div></div></div>
+            <div class="topic-section">
+                <div class="topic-header">
+                    <span class="topic-title">#特斯拉 Tesla 马斯克 Cybercab</span>
+                    <span class="topic-count">2</span>
+                </div>
+                <div class="cards-container">
+                <div class="news-card rank-norm">
+                    <div class="card-rank">
+                        <div class="rank-badge">8</div>
+                    </div>
+                    
+                    <div class="card-content">
+                        <div class="meta-row">
+                            <div class="meta-left">
+                                <span class="source-badge">
+                                    <span class="source-icon"></span>
+                                    雪球【热门股票】
+                                </span>
+                                <span style="color:var(--border)">|</span>
+                                <span>18:22</span>
+                            </div>
+                            <div class="meta-right">
+                                <span class="stat-tag tag-hot">🔥 8</span>
+                                
+                            </div>
+                        </div>
+                        
+                        <a href="https://xueqiu.com/s/TSLA" target="_blank" class="news-link">特斯拉</a>
+                    </div>
+                </div>
+                <div class="news-card rank-norm">
+                    <div class="card-rank">
+                        <div class="rank-badge">9</div>
+                    </div>
+                    
+                    <div class="card-content">
+                        <div class="meta-row">
+                            <div class="meta-left">
+                                <span class="source-badge">
+                                    <span class="source-icon"></span>
+                                    凤凰网
+                                </span>
+                                <span style="color:var(--border)">|</span>
+                                <span>18:22</span>
+                            </div>
+                            <div class="meta-right">
+                                <span class="stat-tag tag-hot">🔥 9</span>
+                                
+                            </div>
+                        </div>
+                        
+                        <a href="https://news.ifeng.com/c/8ojSkf95Puf" target="_blank" class="news-link">马斯克：我应该少碰政治</a>
+                    </div>
+                </div></div></div>
+            <div class="topic-section">
+                <div class="topic-header">
+                    <span class="topic-title">#亚马逊 Amazon AWS Bedrock</span>
+                    <span class="topic-count">2</span>
+                </div>
+                <div class="cards-container">
+                <div class="news-card rank-norm">
+                    <div class="card-rank">
+                        <div class="rank-badge">4</div>
+                    </div>
+                    
+                    <div class="card-content">
+                        <div class="meta-row">
+                            <div class="meta-left">
+                                <span class="source-badge">
+                                    <span class="source-icon"></span>
+                                    Hacker News
+                                </span>
+                                <span style="color:var(--border)">|</span>
+                                <span>18:22</span>
+                            </div>
+                            <div class="meta-right">
+                                <span class="stat-tag tag-hot">🔥 4</span>
+                                
+                            </div>
+                        </div>
+                        
+                        <a href="https://news.ycombinator.com/item?id=46056232" target="_blank" class="news-link">Amazon faces FAA probe after delivery drone snaps internet cable in Texas</a>
+                    </div>
+                </div>
+                <div class="news-card rank-norm">
+                    <div class="card-rank">
+                        <div class="rank-badge">19</div>
+                    </div>
+                    
+                    <div class="card-content">
+                        <div class="meta-row">
+                            <div class="meta-left">
+                                <span class="source-badge">
+                                    <span class="source-icon"></span>
+                                    金十数据
+                                </span>
+                                <span style="color:var(--border)">|</span>
+                                <span>18:22</span>
+                            </div>
+                            <div class="meta-right">
+                                <span class="stat-tag tag-hot">🔥 19</span>
+                                
+                            </div>
+                        </div>
+                        
+                        <a href="https://flash.jin10.com/detail/20251202054629882800" target="_blank" class="news-link">亚马逊(AMZN.O)：在西雅图和费城部分地区提供30分钟送达服务。</a>
+                    </div>
+                </div></div></div>
+            <div class="topic-section">
+                <div class="topic-header">
+                    <span class="topic-title">#大选 峰会 元首 双边会晤 联合声明</span>
+                    <span class="topic-count">1</span>
+                </div>
+                <div class="cards-container">
+                <div class="news-card rank-norm">
+                    <div class="card-rank">
+                        <div class="rank-badge">15</div>
+                    </div>
+                    
+                    <div class="card-content">
+                        <div class="meta-row">
+                            <div class="meta-left">
+                                <span class="source-badge">
+                                    <span class="source-icon"></span>
+                                    联合早报
+                                </span>
+                                <span style="color:var(--border)">|</span>
+                                <span>18:22</span>
+                            </div>
+                            <div class="meta-right">
+                                <span class="stat-tag tag-hot">🔥 15</span>
+                                
+                            </div>
+                        </div>
+                        
+                        <a href="https://www.zaochenbao.com/news/politics/202512/0158731.html" target="_blank" class="news-link">洪都拉斯大选开票 受特朗普支持候选人领先</a>
+                    </div>
+                </div></div></div>
+            <div class="topic-section">
+                <div class="topic-header">
+                    <span class="topic-title">#A股 上证指数 纳斯达克 标普500 港股 中概股</span>
+                    <span class="topic-count">1</span>
+                </div>
+                <div class="cards-container">
+                <div class="news-card rank-2">
+                    <div class="card-rank">
+                        <div class="rank-badge">2</div>
+                    </div>
+                    
+                    <div class="card-content">
+                        <div class="meta-row">
+                            <div class="meta-left">
+                                <span class="source-badge">
+                                    <span class="source-icon"></span>
+                                    华尔街见闻 最热
+                                </span>
+                                <span style="color:var(--border)">|</span>
+                                <span>18:22</span>
+                            </div>
+                            <div class="meta-right">
+                                <span class="stat-tag tag-hot">🔥 2</span>
+                                
+                            </div>
+                        </div>
+                        
+                        <a href="https://wallstreetcn.com/articles/3760444" target="_blank" class="news-link">“风险晴雨表”加密货币大跌，标普连涨终结，中概股逆市上涨，白银强势再创新高</a>
+                    </div>
+                </div></div></div>
+            <div class="new-section">
+                <div class="header-title" style="font-size: 20px; margin-bottom: 16px;">
+                    🚀 新增热点 <span style="font-weight: normal; color: var(--text-sub); font-size: 14px;">(16)</span>
+                </div><div style="margin-bottom: 24px; break-inside: avoid;">
+                <div style="font-size: 13px; font-weight: 700; color: var(--text-sub); margin-bottom: 10px;">华尔街见闻 最热</div>
+                <div class="new-grid-container">
+                <div class="new-card-item">
+                    <div class="rank-badge" style="width:20px; height:20px; font-size:11px; background:#ef4444; color:white; border-radius:4px;">2</div>
+                    <div style="flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                        <a href="https://wallstreetcn.com/articles/3760444" target="_blank" style="text-decoration: none; color: var(--text-main); font-size: 13px; font-weight: 500;">“风险晴雨表”加密货币大跌，标普连涨终结，中概股逆市上涨，白银强势再创新高</a>
+                    </div>
+                </div></div></div><div style="margin-bottom: 24px; break-inside: avoid;">
+                <div style="font-size: 13px; font-weight: 700; color: var(--text-sub); margin-bottom: 10px;">格隆汇</div>
+                <div class="new-grid-container">
+                <div class="new-card-item">
+                    <div class="rank-badge" style="width:20px; height:20px; font-size:11px; background:#ef4444; color:white; border-radius:4px;">2</div>
+                    <div style="flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                        <a href="https://www.gelonghui.com/news/5127749" target="_blank" style="text-decoration: none; color: var(--text-main); font-size: 13px; font-weight: 500;">烯石电车新材料(06128.HK)拟出售美国石墨生产项目</a>
+                    </div>
+                </div>
+                <div class="new-card-item">
+                    <div class="rank-badge" style="width:20px; height:20px; font-size:11px; background:#ef4444; color:white; border-radius:4px;">3</div>
+                    <div style="flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                        <a href="https://www.gelonghui.com/news/5127748" target="_blank" style="text-decoration: none; color: var(--text-main); font-size: 13px; font-weight: 500;">SHANGHAI GROWTH(00770.HK)：安永辞任核数师</a>
+                    </div>
+                </div></div></div><div style="margin-bottom: 24px; break-inside: avoid;">
+                <div style="font-size: 13px; font-weight: 700; color: var(--text-sub); margin-bottom: 10px;">金十数据</div>
+                <div class="new-grid-container">
+                <div class="new-card-item">
+                    <div class="rank-badge" style="width:20px; height:20px; font-size:11px; background:#ef4444; color:white; border-radius:4px;">1</div>
+                    <div style="flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                        <a href="https://flash.jin10.com/detail/20251202070122711800" target="_blank" style="text-decoration: none; color: var(--text-main); font-size: 13px; font-weight: 500;">现货白银周二小幅低开，现报57.84美元/盎司。</a>
+                    </div>
+                </div>
+                <div class="new-card-item">
+                    <div class="rank-badge" style="width:20px; height:20px; font-size:11px; background:#ef4444; color:white; border-radius:4px;">2</div>
+                    <div style="flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                        <a href="https://flash.jin10.com/detail/20251202070048815800" target="_blank" style="text-decoration: none; color: var(--text-main); font-size: 13px; font-weight: 500;">韩国11月CPI月率 -0.2%，预期-0.25%，前值0.30%。</a>
+                    </div>
+                </div>
+                <div class="new-card-item">
+                    <div class="rank-badge" style="width:20px; height:20px; font-size:11px; background:#ef4444; color:white; border-radius:4px;">3</div>
+                    <div style="flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                        <a href="https://flash.jin10.com/detail/20251202070038863800" target="_blank" style="text-decoration: none; color: var(--text-main); font-size: 13px; font-weight: 500;">韩国11月CPI年率 2.4%，预期2.35%，前值2.40%。</a>
+                    </div>
+                </div>
+                <div class="new-card-item">
+                    <div class="rank-badge" style="width:20px; height:20px; font-size:11px; background:var(--border); color:var(--text-sub); border-radius:4px;">6</div>
+                    <div style="flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                        <a href="https://flash.jin10.com/detail/20251202063155809800" target="_blank" style="text-decoration: none; color: var(--text-main); font-size: 13px; font-weight: 500;">据Politico：欧盟同意取消对那些拒绝接回被拒移民的国家，所提供的贸易优惠待遇。</a>
+                    </div>
+                </div>
+                <div class="new-card-item">
+                    <div class="rank-badge" style="width:20px; height:20px; font-size:11px; background:var(--border); color:var(--text-sub); border-radius:4px;">8</div>
+                    <div style="flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                        <a href="https://flash.jin10.com/detail/20251202062538615800" target="_blank" style="text-decoration: none; color: var(--text-main); font-size: 13px; font-weight: 500;">亚马逊在美国两座城市试点“闪送”服务</a>
+                    </div>
+                </div>
+                <div class="new-card-item">
+                    <div class="rank-badge" style="width:20px; height:20px; font-size:11px; background:var(--border); color:var(--text-sub); border-radius:4px;">9</div>
+                    <div style="flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                        <a href="https://flash.jin10.com/detail/20251202061819637800" target="_blank" style="text-decoration: none; color: var(--text-main); font-size: 13px; font-weight: 500;">苹果任命AI业务副总裁</a>
+                    </div>
+                </div>
+                <div class="new-card-item">
+                    <div class="rank-badge" style="width:20px; height:20px; font-size:11px; background:var(--border); color:var(--text-sub); border-radius:4px;">11</div>
+                    <div style="flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                        <a href="https://flash.jin10.com/detail/20251202061057824800" target="_blank" style="text-decoration: none; color: var(--text-main); font-size: 13px; font-weight: 500;">美国财长贝森特：财政部正在调查有关明尼苏达州的税款可能被挪用至“青年党”的指控。</a>
+                    </div>
+                </div>
+                <div class="new-card-item">
+                    <div class="rank-badge" style="width:20px; height:20px; font-size:11px; background:var(--border); color:var(--text-sub); border-radius:4px;">12</div>
+                    <div style="flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                        <a href="https://flash.jin10.com/detail/20251202060124213800" target="_blank" style="text-decoration: none; color: var(--text-main); font-size: 13px; font-weight: 500;">美联储12月降息25个基点的概率为87.6%</a>
+                    </div>
+                </div></div></div><div style="margin-bottom: 24px; break-inside: avoid;">
+                <div style="font-size: 13px; font-weight: 700; color: var(--text-sub); margin-bottom: 10px;">快讯通</div>
+                <div class="new-grid-container">
+                <div class="new-card-item">
+                    <div class="rank-badge" style="width:20px; height:20px; font-size:11px; background:#ef4444; color:white; border-radius:4px;">1</div>
+                    <div style="flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                        <a href="https://www.fastbull.com/cn/fastshort/3800330_100_1" target="_blank" style="text-decoration: none; color: var(--text-main); font-size: 13px; font-weight: 500;">特朗普政府表示，如果明尼苏达州不撤销违规颁发的商业驾照，可能扣留高达3040万美元的联邦资金。</a>
+                    </div>
+                </div>
+                <div class="new-card-item">
+                    <div class="rank-badge" style="width:20px; height:20px; font-size:11px; background:#ef4444; color:white; border-radius:4px;">3</div>
+                    <div style="flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                        <a href="https://www.fastbull.com/cn/fastshort/3800324_100_1" target="_blank" style="text-decoration: none; color: var(--text-main); font-size: 13px; font-weight: 500;">全球最大黄金ETF基金（SPDR）：黄金持有量增加0.44%，即4.58吨。</a>
+                    </div>
+                </div>
+                <div class="new-card-item">
+                    <div class="rank-badge" style="width:20px; height:20px; font-size:11px; background:var(--border); color:var(--text-sub); border-radius:4px;">4</div>
+                    <div style="flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                        <a href="https://www.fastbull.com/cn/fastshort/3800316_100_1" target="_blank" style="text-decoration: none; color: var(--text-main); font-size: 13px; font-weight: 500;">新西兰联储新行长表示，低通胀仍是关键使命。</a>
+                    </div>
+                </div>
+                <div class="new-card-item">
+                    <div class="rank-badge" style="width:20px; height:20px; font-size:11px; background:var(--border); color:var(--text-sub); border-radius:4px;">5</div>
+                    <div style="flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                        <a href="https://www.fastbull.com/cn/fastshort/3800314_100_1" target="_blank" style="text-decoration: none; color: var(--text-main); font-size: 13px; font-weight: 500;">美国财长贝森特：财政部正在调查有关明尼苏达州税收资金可能已被转移给索马里青年党（Al-Shabaab）的指控。</a>
+                    </div>
+                </div></div></div><div style="margin-bottom: 24px; break-inside: avoid;">
+                <div style="font-size: 13px; font-weight: 700; color: var(--text-sub); margin-bottom: 10px;">Hacker News</div>
+                <div class="new-grid-container">
+                <div class="new-card-item">
+                    <div class="rank-badge" style="width:20px; height:20px; font-size:11px; background:var(--border); color:var(--text-sub); border-radius:4px;">5</div>
+                    <div style="flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                        <a href="https://news.ycombinator.com/item?id=46114144" target="_blank" style="text-decoration: none; color: var(--text-main); font-size: 13px; font-weight: 500;">Apple AI Chief Retiring After Siri Failure</a>
+                    </div>
+                </div></div></div></div>
+            <div class="footer">
+                <p>TrendRadar Generated · <a href="https://github.com/sansan0/TrendRadar" target="_blank">GitHub</a></p>
+    <p style="color: var(--accent);">Update Available: 3.4.1</p>
+            </div>
+        </div>
+        
+        <script>
+            // 切换主题逻辑
+            function toggleTheme() {
+                const body = document.body;
+                if (body.classList.contains('dark-mode')) {
+                    body.classList.remove('dark-mode');
+                    body.classList.add('light-mode');
+                } else if (body.classList.contains('light-mode')) {
+                    body.classList.remove('light-mode');
+                    body.classList.add('dark-mode');
+                } else {
+                    // 当前无强制类，检测系统偏好
+                    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+                        body.classList.add('light-mode');
+                    } else {
+                        body.classList.add('dark-mode');
+                    }
+                }
+            }
+
+            async function saveAsImage() {
+                const button = event.target;
+                const originalText = button.textContent;
+                button.textContent = 'Processing...'; button.disabled = true;
+                
+                const container = document.querySelector('.container');
+                const actions = document.querySelector('.header-actions');
+                actions.style.display = 'none'; // 截图时隐藏按钮
+                
+                try {
+                    await new Promise(r => setTimeout(r, 200));
+                    
+                    // 动态获取当前背景色，确保截图颜色正确
+                    const computedStyle = window.getComputedStyle(document.body);
+                    const bgColor = computedStyle.backgroundColor;
+                    
+                    const canvas = await html2canvas(container, {
+                        scale: 2,
+                        backgroundColor: bgColor, // 使用当前动态背景色
+                        useCORS: true
+                    });
+                    
+                    const link = document.createElement('a');
+                    link.download = `TrendRadar_${new Date().getTime()}.png`;
+                    link.href = canvas.toDataURL('image/png');
+                    link.click();
+                    
+                    button.textContent = 'Saved';
+                } catch(e) {
+                    console.error(e);
+                    button.textContent = 'Error';
+                } finally {
+                    actions.style.display = 'flex';
+                    setTimeout(() => { button.disabled = false; button.textContent = originalText; }, 2000);
+                }
+            }
+        </script>
+    </body>
+    </html>
+    
