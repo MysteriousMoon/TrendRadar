@@ -6,6 +6,7 @@ import random
 import re
 import time
 import webbrowser
+import shutil
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
@@ -4641,8 +4642,48 @@ class NewsAnalyzer:
             raise
 
 
+def cleanup_old_output(days_to_keep: int = 2):
+    """清理旧的输出目录"""
+    output_dir = Path("output")
+    if not output_dir.exists():
+        return
+
+    print(f"正在检查旧的输出目录 (保留最近 {days_to_keep} 天)...")
+    
+    now = datetime.now()
+    cutoff_date = now - timedelta(days=days_to_keep)
+    
+    deleted_count = 0
+    
+    for item in output_dir.iterdir():
+        if not item.is_dir():
+            continue
+            
+        # 检查目录名是否符合日期格式 (YYYY年MM月DD日)
+        try:
+            dir_date = datetime.strptime(item.name, "%Y年%m月%d日")
+            if dir_date < cutoff_date:
+                try:
+                    shutil.rmtree(item)
+                    print(f"已删除过期目录: {item.name}")
+                    deleted_count += 1
+                except Exception as e:
+                    print(f"删除目录 {item.name} 失败: {e}")
+        except ValueError:
+            # 忽略不符合日期格式的目录
+            continue
+            
+    if deleted_count > 0:
+        print(f"清理完成，共删除 {deleted_count} 个过期目录")
+    else:
+        print("没有需要清理的过期目录")
+
+
 def main():
     try:
+        # 启动时清理旧数据
+        cleanup_old_output()
+        
         analyzer = NewsAnalyzer()
         analyzer.run()
     except FileNotFoundError as e:
